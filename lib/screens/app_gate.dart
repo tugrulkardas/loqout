@@ -1,0 +1,118 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+
+import '../services/permission_service.dart';
+import '../theme/tapfocus_theme.dart';
+import '../widgets/product_motto.dart';
+import 'home_shell.dart';
+import 'permission_onboarding_screen.dart';
+import '../l10n/l10n_ext.dart';
+
+/// First-frame-safe bootstrap gate.
+///
+/// Launches as a lightweight UI shell, waits until the Activity frame is ready,
+/// then checks permissions. Never starts background services.
+class AppGate extends StatefulWidget {
+  const AppGate({
+    super.key,
+    this.permissionService = const PermissionService(),
+  });
+
+  final PermissionService permissionService;
+
+  @override
+  State<AppGate> createState() => _AppGateState();
+}
+
+class _AppGateState extends State<AppGate> {
+  bool _ready = false;
+  bool _permissionsOk = false;
+
+  bool get _requiresAndroidPermissions => !kIsWeb && Platform.isAndroid;
+
+  @override
+  void initState() {
+    super.initState();
+    // Respect Flutter engine lifecycle: no platform permission calls
+    // until the first frame has been painted.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _evaluate());
+  }
+
+  Future<void> _evaluate() async {
+    if (!mounted) return;
+
+    // Enforcement permissions are Android-only; skip the gate elsewhere.
+    if (!_requiresAndroidPermissions) {
+      setState(() {
+        _permissionsOk = true;
+        _ready = true;
+      });
+      return;
+    }
+
+    PermissionSnapshot snapshot;
+    try {
+      snapshot = await widget.permissionService.checkAll();
+    } catch (e, st) {
+      debugPrint('AppGate permission evaluation failed: $e\n$st');
+      snapshot = const PermissionSnapshot(
+        usageStats: false,
+        systemAlertWindow: false,
+        notifications: false,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _permissionsOk = snapshot.allGranted;
+      _ready = true;
+    });
+  }
+
+  void _onPermissionsComplete() {
+    if (!mounted) return;
+    setState(() => _permissionsOk = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      final c = context.colors;
+      return Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              children: [
+                const Spacer(),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  context.l10n.gateStarting,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.textSecondary),
+                ),
+                const Spacer(),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 28),
+                  child: ProductMotto(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_permissionsOk) {
+      return PermissionOnboardingScreen(
+        permissionService: widget.permissionService,
+        onComplete: _onPermissionsComplete,
+      );
+    }
+
+    return const HomeShell();
+  }
+}

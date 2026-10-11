@@ -1,0 +1,90 @@
+---
+description: TapFocus product manifesto, positioning, and Android architectural guardrails for Cursor
+alwaysApply: true
+---
+
+# 🚀 TAPFOCUS: PRODUCT MANIFESTO & ARCHITECTURAL SPECIFICATION
+
+## 1. PRODUCT VISION & POSITIONING
+**TapFocus** is not just an "app blocker" or a passive wellness app. It is a **Hybrid Behavioral Enforcement & Attention Analytics System (Focus OS)** that bridges physical interaction with digital focus.
+
+* **Core Insight:** Behavior change requires *friction*, not intention. Impulse always beats intention in digital environments.
+* **Core Shift:** From software toggles → to **physically anchored focus sessions**.
+* **Tagline:** *Tap Focus. Build control over attention.*
+
+---
+
+## 2. THE PROBLEM VS. THE SOLUTION
+
+### The Problem
+* Digital attention is fragmented (~150 phone checks/day).
+* Software-only blockers are easily bypassed (low enforcement depth).
+* Wellness apps rely on motivation and willpower, which fail in high-impulse environments.
+* **Root Cause:** Digital focus tools fail because they lack meaningful *physical constraint*.
+
+### The Solution: Hybrid Environmental Control
+1. **Hardware Layer (Physical Friction):** A battery-less, minimalist NFC trigger device.
+2. **Software Layer (App-Level Restriction):** Session-based blocking system enforced by Android foreground services.
+3. **Behavioral Tracking Layer:** An integrated **9x9 Energy–Valence Matrix** to log cognitive and emotional states before entering focus.
+
+---
+
+## 3. CORE FOCUS MECHANISM (THE RITUAL)
+
+1. **Select Distracting Apps:** User defines which applications are restricted during the session.
+2. **Pre-Focus Check-in (Mood Layer):** User logs their current state on a 9x9 matrix:
+   * **X-Axis (Valence):** Negative → Positive Emotional State
+   * **Y-Axis (Energy):** Low → High Cognitive Energy
+3. **Physical Activation (The Tap):** User taps their phone to the physical NFC device to lock in the session.
+4. **Enforced Focus Session:** Distracting apps are blocked.
+5. **Session Exit:** Requires **physical re-authentication** (tapping the NFC device again).
+   * *Result:* Intentional friction replaces impulsive behavior.
+
+---
+
+## 4. COMPETITIVE DIFFERENTIATION
+
+| Category | Wellness Apps | App Blockers | **TapFocus (Our Standard)** |
+| :--- | :--- | :--- | :--- |
+| **Approach** | Passive mindfulness | Software restriction | **Physical + behavioral system** |
+| **Enforcement** | None | Weak / bypassable | **Strong physical friction** |
+| **Data** | Minimal | Usage logs only | **Behavioral + emotional states** |
+| **Outcome** | Awareness | Temporary control | **Habit formation system** |
+
+---
+
+## 5. BEHAVIORAL SCIENCE FOUNDATION (EMBODIED COGNITION)
+* Physical actions reinforce cognitive commitment.
+* Ritualization increases adherence to deep work.
+* External physical constraints reduce impulse-driven failure.
+* **Focus becomes a physical state transition, not a simple UI toggle.**
+
+---
+
+## 6. DATA & ANALYTICS ARCHITECTURE (DYNAMIC DASHBOARD)
+TapFocus evolves from a simple blocker into a **Personal Attention Analytics System**. We longitudinally track and correlate:
+* Focus duration vs. **Cognitive Energy State**
+* Focus duration vs. **Emotional State (Valence)**
+* Distraction trigger correlations and peak productivity windows.
+* *Key Insight:* Focus is not just time management — it is **state management**.
+
+---
+
+## 7. ⚠️ TECHNICAL & ARCHITECTURAL GUARDRAILS FOR LEAD DEVELOPER (CURSOR)
+
+To prevent Android OS kills, race conditions, and death loops, all development MUST adhere to the following architectural rules:
+
+### A. Zero Silent Background Start (No Death Loops)
+* `flutter_background_service` must **NEVER** use `autoStart: true` or `autoStartOnBoot: true` without explicit user initiation.
+* Background watchdog services must ONLY be triggered after:
+  1. All required OS permissions are explicitly granted.
+  2. The user initiates a focus session via the **NFC Tap / Mood Meter confirmation**.
+
+### B. Defensive Permission Handling
+* **Usage Stats (`PACKAGE_USAGE_STATS`):** Never query app usage data without checking permission status first. Wrap all usage queries in `try-catch` blocks.
+* **System Alert Window (`SYSTEM_ALERT_WINDOW`):** Required for bringing the Mood Meter / Block Screen to the foreground when a banned app is opened.
+* **Fallback UI:** If permissions are missing, show an explicit onboarding/permission-request UI. Do NOT crash the app.
+
+### C. Clean Separation of Concerns
+* **Main Isolate (UI):** Handles 9x9 Mood Matrix, onboarding, analytics dashboard, and NFC read events.
+* **Background Isolate (Watchdog):** Strictly responsible for monitoring foreground apps and triggering the intervention screen when a blocked package is detected. Must be marked with `@pragma('vm:entry-point')`.

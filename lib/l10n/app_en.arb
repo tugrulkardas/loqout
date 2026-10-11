@@ -1,0 +1,325 @@
+{
+  "@@locale": "en",
+  "appTitle": "LoqOut",
+  "productMotto": "If you focus you win, if you don't focus the world wins.",
+  "gateStarting": "Starting LoqOut…",
+  "focusHowFeeling": "How are you feeling right now?",
+  "focusAxisGuide": "Energy (vertical) · Valence (horizontal)",
+  "navFocus": "Focus",
+  "navInsights": "Insights",
+  "navImpact": "Impact",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "retry": "Try again",
+  "refresh": "Refresh",
+  "openAppSettings": "Open app settings",
+  "themeTooltip": "Theme: {mode}",
+  "@themeTooltip": {
+    "placeholders": {
+      "mode": {"type": "String"}
+    }
+  },
+  "themeDay": "Day",
+  "themeNight": "Night",
+  "themeSystem": "System",
+  "languageTooltip": "Language",
+  "languageSystem": "System",
+  "languageEnglish": "English",
+  "languageTurkish": "Türkçe",
+
+  "axisHighEnergy": "High Energy",
+  "axisLowEnergy": "Low Energy",
+  "axisPleasant": "Pleasant",
+  "axisUnpleasant": "Unpleasant",
+  "moodNeutral": "Neutral",
+  "moodEnraged": "Enraged",
+  "moodFurious": "Furious",
+  "moodPanicked": "Panicked",
+  "moodStressed": "Stressed",
+  "moodFrustrated": "Frustrated",
+  "moodAnnoyed": "Annoyed",
+  "moodAnxious": "Anxious",
+  "moodUneasy": "Uneasy",
+  "moodDespair": "Despair",
+  "moodDepressed": "Depressed",
+  "moodExhausted": "Exhausted",
+  "moodAlert": "Alert",
+  "moodTired": "Tired",
+  "moodEcstatic": "Ecstatic",
+  "moodThrilled": "Thrilled",
+  "moodEnergized": "Energized",
+  "moodHappy": "Happy",
+  "moodProductive": "Productive",
+  "moodFocused": "Focused",
+  "moodContent": "Content",
+  "moodAtEase": "At ease",
+  "moodSerene": "Serene",
+  "moodPeaceful": "Peaceful",
+  "moodChill": "Chill",
+  "checkInStressedFrustrated": "Stressed / Frustrated",
+  "checkInDrainedDistracted": "Drained / Distracted",
+  "checkInCalmFocused": "Calm / Focused",
+  "checkInEnergizedProductive": "Energized / Productive",
+  "energyHigh": "High Energy",
+  "energyLow": "Low Energy",
+  "valencePleasant": "Pleasant",
+  "valenceUnpleasant": "Unpleasant",
+
+  "focusTitle": "Focus",
+  "focusMoodSelectedHint": "Mood selected. Tap NFC (or Scan QR) to start focus.",
+  "focusBlocklistUpdated": "Blocklist updated. Tap NFC (or Scan QR) to start focus.",
+  "focusConfigureBlocklist": "Configure your Default Blocklist before starting focus.",
+  "focusNfcActivate": "NFC Tap — Activate Focus",
+  "focusScanQrBeta": "Scan QR (Beta NFC)",
+  "focusQrAuthenticated": "Beta QR authenticated — starting focus…",
+  "focusNfcCheckFailed": "NFC check failed: {error} — use Scan QR (Beta NFC) below.",
+  "@focusNfcCheckFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "focusNfcUnavailable": "NFC unavailable on this device — use Scan QR (Beta NFC).",
+  "focusNoAppsShielded": "No apps shielded yet",
+  "focusShieldCount": "{count} apps shielded",
+  "@focusShieldCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "focusEditBlocklist": "Edit Blocklist",
+  "focusEnergyValencePair": "{energy} · {valence}",
+  "@focusEnergyValencePair": {
+    "placeholders": {
+      "energy": {"type": "String"},
+      "valence": {"type": "String"}
+    }
+  },
+
+  "sessionLocked": "Session locked",
+  "sessionActivating": "Activating…",
+  "sessionMoodLine": "Mood: {mood} (Intensity: {intensity}/5)",
+  "@sessionMoodLine": {
+    "placeholders": {
+      "mood": {"type": "String"},
+      "intensity": {"type": "int"}
+    }
+  },
+  "sessionAuthLine": "Auth: {channel} ({uid}…)",
+  "@sessionAuthLine": {
+    "placeholders": {
+      "channel": {"type": "String"},
+      "uid": {"type": "String"}
+    }
+  },
+  "sessionAuthBetaQr": "Beta QR",
+  "sessionAuthMockNfc": "Mock NFC",
+  "sessionAuthNfc": "NFC",
+  "sessionShieldingApps": "Shielding {count} apps",
+  "@sessionShieldingApps": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "sessionBlockedAttempt": "Blocked attempt: {package}",
+  "@sessionBlockedAttempt": {
+    "placeholders": {
+      "package": {"type": "String"}
+    }
+  },
+  "sessionStartingWatchdog": "Starting focus watchdog…",
+  "sessionActivateFailed": "Could not activate focus yet. Check permissions and retry.",
+  "sessionRetryActivate": "Retry Activate Focus",
+  "sessionAppsLocked": "{count} apps locked",
+  "@sessionAppsLocked": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "sessionUnlockHint": "Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.",
+  "sessionScanQrUnlock": "Scan QR (Beta NFC) — Unlock",
+  "sessionEmergencyUnlock": "Emergency Unlock (Burn Credits)",
+  "sessionStartFailed": "Session start failed: {error}",
+  "@sessionStartFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+
+  "qrScanTitle": "Scan QR (Beta NFC)",
+  "qrDesktopHint": "Camera QR is for Android beta devices. Enter the beta code below.",
+  "qrPermissionRequired": "Camera permission is required to scan the beta QR.",
+  "qrCameraOpenFailed": "Could not open the camera. Grant Camera Permission in settings and try again.",
+  "qrGrantPermission": "Grant Camera Permission",
+  "qrOrEnterManually": "Or enter the beta code manually:",
+  "qrBetaAuthCode": "Beta auth code",
+  "qrScanPrompt": "Scan the LoqOut beta QR (\"{payload}\")",
+  "@qrScanPrompt": {
+    "placeholders": {
+      "payload": {"type": "String"}
+    }
+  },
+  "qrUnrecognized": "Unrecognized QR. Got \"{got}\" — need \"{expected}\".",
+  "@qrUnrecognized": {
+    "placeholders": {
+      "got": {"type": "String"},
+      "expected": {"type": "String"}
+    }
+  },
+  "qrInvalidCode": "Invalid code. Expected: {expected}",
+  "@qrInvalidCode": {
+    "placeholders": {
+      "expected": {"type": "String"}
+    }
+  },
+
+  "emergencyOverrideTitle": "Emergency Override",
+  "emergencyOverrideBody": "Breaking this session will burn {cost} Impact Credits. As a Corporate Pledge, LoqOut donates the financial equivalent to charity.",
+  "@emergencyOverrideBody": {
+    "placeholders": {
+      "cost": {"type": "int"}
+    }
+  },
+  "emergencyOverrideOrdinal": "This is your {ordinal} unlock this month.",
+  "@emergencyOverrideOrdinal": {
+    "placeholders": {
+      "ordinal": {"type": "String"}
+    }
+  },
+  "emergencyInsufficient": "Insufficient Impact Credits for this override.",
+  "emergencyInsufficientHint": "Insufficient Impact Credits. Unlock with NFC, or wait for next month's quota.",
+  "emergencyConfirmBurn": "Burn credits & unlock",
+  "emergencyKeepLocked": "Keep session locked",
+
+  "impactTitle": "Impact",
+  "impactHowThisWorks": "How this works",
+  "impactHowThisWorksBody": "Emergency unlocking a session burns your Monthly Impact Quota. As a Corporate Pledge, LoqOut donates the financial equivalent of your burned quota to global charities. If you focus you win, if you don't focus the world wins.",
+  "impactMonthlyQuota": "Monthly Impact Quota",
+  "impactCredits": "Impact Credits",
+  "impactQuotaBlurb": "Included with your focus subscription. Emergency overrides draw from this monthly quota.",
+  "impactPenaltyLadder": "Penalty Ladder",
+  "impactPenaltyIntro": "The cost of breaking your focus escalates with every unlock.",
+  "impactPenaltyMonthStats": "This month · {used} used · next override {next} credits",
+  "@impactPenaltyMonthStats": {
+    "placeholders": {
+      "used": {"type": "int"},
+      "next": {"type": "int"}
+    }
+  },
+  "impactPenaltyCapDisclaimer": "Cost escalates up to a maximum of 40 credits per unlock.",
+  "impactCorporatePledge": "Corporate Pledge",
+  "impactLifetimePledged": "Lifetime Impact Credits pledged",
+  "impactPledgeBody": "85% of burned Impact Credit value is pledged by LoqOut to verified global charities. Your focus discipline funds impact.",
+
+  "insightsTitle": "Insights",
+  "insightsHeroTitle": "Behavioral telemetry",
+  "insightsHeroSubtitle": "See how mood, friction, and focus windows shape your attention.",
+  "insightsEmptyTitle": "No sessions yet",
+  "insightsEmptyBody": "Complete a focus session to unlock your attention analytics.",
+  "insightsSessionsAnalyzed": "{count} sessions analyzed · updated {time}",
+  "@insightsSessionsAnalyzed": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "time": {"type": "String"}
+    }
+  },
+  "insightsExportBeta": "Export Beta Telemetry",
+  "insightsExporting": "Exporting…",
+  "insightsMoodDistractionTitle": "Mood vs. distraction",
+  "insightsMoodDistractionSubtitle": "Where attention slips — and what it costs you",
+  "insightsVulnerability": "You are most vulnerable to distractions when feeling {mood}. We blocked {count} urge(s) to open apps while you were in this state.",
+  "@insightsVulnerability": {
+    "placeholders": {
+      "mood": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "insightsFrictionTitle": "Friction score",
+  "insightsBeforeAfterTitle": "Before & after",
+  "insightsBeforeAfterSubtitle": "How focus sessions reshape how you feel",
+  "insightsBeforeAfterEmpty": "Complete a post-session check-in to unlock your mood story.",
+  "insightsShiftFromTo": "You mostly shift from {start}  →  {end}.",
+  "@insightsShiftFromTo": {
+    "placeholders": {
+      "start": {"type": "String"},
+      "end": {"type": "String"}
+    }
+  },
+  "insightsPeakTitle": "Peak focus window",
+  "insightsMoodImproves": "Focusing improves your mood.",
+  "insightsMoodSteadies": "Focusing steadies your emotional state.",
+  "insightsMoodDeclines": "Sessions leave you more drained — protect recovery.",
+
+  "postSessionTitle": "Quick check-in",
+  "postSessionPrompt": "How do you feel after this focus session?",
+  "postSessionSkip": "Skip",
+
+  "blocklistTitle": "Edit Blocklist",
+  "blocklistSave": "Save Blocklist",
+  "blocklistSaving": "Saving…",
+  "blocklistEmptyApps": "No launchable apps found.",
+  "blocklistSelectOne": "Select at least one app for your Default Blocklist.",
+  "blocklistSaved": "Default Blocklist saved — {count} apps.",
+  "@blocklistSaved": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "blocklistLoadFailed": "Could not load apps: {error}",
+  "@blocklistLoadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "blocklistSaveFailed": "Could not save blocklist: {error}",
+  "@blocklistSaveFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "blocklistOpenUsageSettings": "Open Usage Access Settings",
+
+  "permissionsTitle": "Permissions required",
+  "permissionsBody": "LoqOut needs a few system permissions to enforce focus sessions. Grant each one below.",
+  "permissionsGrantedRecheck": "I granted them — check again",
+  "permissionsGrant": "Grant permission",
+
+  "daypartMorning": "Morning",
+  "daypartAfternoon": "Afternoon",
+  "daypartEvening": "Evening",
+  "daypartNight": "Night",
+
+  "iosShieldTitle": "Shield",
+  "iosShieldBody": "Choose the apps, categories, and websites LoqOut locks during a focus session. Apple keeps those names on the device; LoqOut only receives the shield tokens.",
+  "iosShieldAuthorize": "Allow Screen Time access",
+  "iosShieldOpenPicker": "Choose what to shield",
+  "iosShieldDenied": "Screen Time access is off. Enable it for LoqOut in Settings.",
+  "iosShieldOpenSettings": "Open Settings",
+  "iosShieldSelectOne": "Choose at least one app, category, or website to shield.",
+  "iosShieldSaved": "Shield updated.",
+  "iosShieldSummary": "{apps} apps · {categories} categories · {sites} websites",
+  "@iosShieldSummary": {
+    "placeholders": {
+      "apps": {"type": "int"},
+      "categories": {"type": "int"},
+      "sites": {"type": "int"}
+    }
+  },
+  "iosShieldApps": "{count} apps",
+  "@iosShieldApps": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "iosShieldCategories": "{count} categories",
+  "@iosShieldCategories": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "iosShieldSites": "{count} websites",
+  "@iosShieldSites": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  }
+}
