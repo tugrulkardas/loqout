@@ -42,25 +42,40 @@ workflows:
             echo "App Store Connect → LoqOut → App Information → Apple ID."
             exit 1
           fi
-          # Highest CFBundleVersion already on TestFlight, across versions.
-          # A failed lookup must stop the build. Falling back to 0 uploads
-          # build 1 again, which App Store Connect rejects as a duplicate.
-          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions)
-          echo "Latest TestFlight bundle version: $LATEST"
+          # Build 1 is already registered in App Store Connect. A rejected
+          # upload still consumes that number, and the TestFlight lookup
+          # returns 0 when the build never finished processing.
+          RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions)
+          echo "TestFlight lookup: [$RAW]"
+          LATEST=$(printf '%s\n' "$RAW" | grep -Eo '[0-9]+' | tail -n 1)
+          echo "Latest TestFlight bundle version: [${LATEST}]"
           case "$LATEST" in
             ''|*[!0-9]*)
-              echo "Could not read a numeric TestFlight build number: [$LATEST]"
+              echo "Could not read a numeric TestFlight build number."
               exit 1
               ;;
           esac
           BUILD_NUMBER=$((LATEST + 1))
+          if [ "$BUILD_NUMBER" -lt 2 ]; then
+            BUILD_NUMBER=2
+          fi
           echo "Next bundle version: $BUILD_NUMBER"
-          # The shield extension does not read FLUTTER_BUILD_NUMBER.
-          sed -i '' "s/CURRENT_PROJECT_VERSION = 1;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" ios/Runner.xcodeproj/project.pbxproj
+          # Runner reads FLUTTER_BUILD_NUMBER. The shield extension and tests
+          # do not, so stamp every literal project version.
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" ios/Runner.xcodeproj/project.pbxproj
           flutter build ipa --release \
             --build-name=1.0.0 \
             --build-number="$BUILD_NUMBER" \
             --export-options-plist=/Users/builder/export_options.plist
+          IPA=$(echo build/ios/ipa/*.ipa)
+          TMP=$(mktemp -d)
+          unzip -q "$IPA" -d "$TMP"
+          BUNDLE_VERSION=$(plutil -extract CFBundleVersion raw -o - "$TMP"/Payload/*.app/Info.plist)
+          echo "IPA CFBundleVersion: $BUNDLE_VERSION"
+          if [ "$BUNDLE_VERSION" != "$BUILD_NUMBER" ]; then
+            echo "IPA bundle version is $BUNDLE_VERSION, expected $BUILD_NUMBER."
+            exit 1
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
