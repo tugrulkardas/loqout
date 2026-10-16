@@ -58,10 +58,12 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _reloadBlocklist());
   }
 
-  Future<void> _reloadBlocklist() async {
+  Future<void> _reloadBlocklist({bool refreshIosShield = false}) async {
     final loaded = await _blocklistService.load();
-    var iosShield = const IosShieldSelection();
-    if (IosShieldService.isSupported) {
+    var iosShield = _iosShield;
+    // AuthorizationCenter aborts the process when the distribution profile
+    // lacks Family Controls. Do not touch it during cold start.
+    if (refreshIosShield && IosShieldService.isSupported) {
       try {
         iosShield = await IosShieldService.instance.summary();
       } catch (e, st) {
@@ -139,7 +141,9 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
             : const EditBlocklistScreen(),
       ),
     );
-    await _reloadBlocklist();
+    await _reloadBlocklist(
+      refreshIosShield: IosShieldService.isSupported && changed == true,
+    );
     if (changed == true && mounted) {
       setState(() {
         _scanStatus = context.l10n.focusBlocklistUpdated;
@@ -147,8 +151,9 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
     }
   }
 
-  bool get _shieldReady =>
-      IosShieldService.isSupported ? _iosShield.hasTargets : _blocklist.isNotEmpty;
+  bool get _shieldReady => IosShieldService.isSupported
+      ? (_iosShield.hasTargets || _blocklist.isNotEmpty)
+      : _blocklist.isNotEmpty;
 
   /// First-time / empty blocklist gate — configure once before kick-off.
   Future<bool> _ensureBlocklistConfigured() async {
@@ -317,14 +322,12 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
     final c = context.colors;
     final l10n = context.l10n;
     final empty = !_shieldReady;
-    final title = IosShieldService.isSupported
-        ? (_iosShield.hasTargets
-            ? l10n.iosShieldSummary(
-                _iosShield.applicationCount,
-                _iosShield.categoryCount,
-                _iosShield.webDomainCount,
-              )
-            : l10n.focusNoAppsShielded)
+    final title = IosShieldService.isSupported && _iosShield.hasTargets
+        ? l10n.iosShieldSummary(
+            _iosShield.applicationCount,
+            _iosShield.categoryCount,
+            _iosShield.webDomainCount,
+          )
         : (empty
             ? l10n.focusNoAppsShielded
             : l10n.focusShieldCount(_blocklist.length));

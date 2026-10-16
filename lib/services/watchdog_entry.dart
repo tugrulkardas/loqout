@@ -145,7 +145,7 @@ void onWatchdogStart(ServiceInstance service) async {
         debugPrint('TapFocus watchdog: violation $currentApp');
         await service.setForegroundNotificationInfo(
           title: 'LoqOut: blocked',
-          content: 'Return to focus — $currentApp is locked.',
+          content: 'Return to LoqOut — $currentApp is locked.',
         );
 
         try {
@@ -166,11 +166,6 @@ void onWatchdogStart(ServiceInstance service) async {
           // Primary: SharedPreferences → TapFocusApplication (overlay + launch).
           // Fallback: service.openApp().
           await _requestNativeIntervention(currentApp);
-          try {
-            await service.openApp();
-          } catch (e) {
-            debugPrint('TapFocus watchdog: openApp failed: $e');
-          }
         }
       } else {
         await service.setForegroundNotificationInfo(

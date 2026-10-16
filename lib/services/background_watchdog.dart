@@ -68,7 +68,10 @@ Future<void> configureWatchdogService() async {
 }
 
 /// Starts the watchdog from the **UI isolate** only.
-Future<bool> startWatchdogService({required List<String>? blockedApps}) async {
+Future<bool> startWatchdogService({
+  required List<String>? blockedApps,
+  bool resetInterventionCount = true,
+}) async {
   try {
     final filtered = (blockedApps ?? const <String>[])
         .whereType<String>()
@@ -83,10 +86,12 @@ Future<bool> startWatchdogService({required List<String>? blockedApps}) async {
     }
 
     await _persistSessionStateMain(active: true, blockedApps: filtered);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt(kPrefsInterventionCountKey, 0);
-    } catch (_) {}
+    if (resetInterventionCount) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(kPrefsInterventionCountKey, 0);
+      } catch (_) {}
+    }
 
     // Create channel again right before start (idempotent) — HyperOS is strict.
     await ensureWatchdogNotificationChannel();

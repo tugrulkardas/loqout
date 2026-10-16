@@ -3,7 +3,10 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+import '../focus_session_screen.dart';
+import '../models/session_telemetry.dart';
 import '../services/permission_service.dart';
+import '../services/session_repository.dart';
 import '../theme/tapfocus_theme.dart';
 import '../widgets/product_motto.dart';
 import 'home_shell.dart';
@@ -29,6 +32,7 @@ class AppGate extends StatefulWidget {
 class _AppGateState extends State<AppGate> {
   bool _ready = false;
   bool _permissionsOk = false;
+  FocusSessionRecord? _activeSession;
 
   bool get _requiresAndroidPermissions => !kIsWeb && Platform.isAndroid;
 
@@ -64,8 +68,17 @@ class _AppGateState extends State<AppGate> {
       );
     }
 
+    FocusSessionRecord? active;
+    try {
+      final draft = await SessionRepository().loadActiveDraft();
+      if (draft != null && draft.endedAt == null) active = draft;
+    } catch (e, st) {
+      debugPrint('AppGate active session lookup failed: $e\n$st');
+    }
+
     if (!mounted) return;
     setState(() {
+      _activeSession = active;
       _permissionsOk = snapshot.allGranted;
       _ready = true;
     });
@@ -111,6 +124,10 @@ class _AppGateState extends State<AppGate> {
         permissionService: widget.permissionService,
         onComplete: _onPermissionsComplete,
       );
+    }
+
+    if (_activeSession != null) {
+      return FocusSessionScreen.resume(_activeSession!);
     }
 
     return const HomeShell();

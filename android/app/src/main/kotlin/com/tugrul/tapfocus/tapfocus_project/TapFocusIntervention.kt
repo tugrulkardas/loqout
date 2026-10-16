@@ -46,15 +46,14 @@ object TapFocusIntervention {
 
     private fun bringAppToForeground(context: Context) {
         try {
-            val packageName = context.packageName
-            val launch = context.packageManager.getLaunchIntentForPackage(packageName)
-                ?: Intent(context, MainActivity::class.java)
+            // Do not use the launcher intent. It carries RESET_TASK_IF_NEEDED,
+            // which restarts Flutter at the home screen and drops the lock UI
+            // while the watchdog keeps blocking.
+            val launch = Intent(context, MainActivity::class.java)
             launch.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             )
             launch.putExtra(MainActivity.EXTRA_FOCUS_INTERVENTION, true)
             context.startActivity(launch)
@@ -85,16 +84,16 @@ object TapFocusIntervention {
             }
 
             val title = TextView(context).apply {
-                text = "Focus session active"
+                text = "LoqOut session active"
                 textSize = 22f
                 setTextColor(Color.parseColor("#1B5E20"))
                 gravity = Gravity.CENTER
             }
             val body = TextView(context).apply {
                 text = if (blockedPackage.isNullOrBlank()) {
-                    "That app is locked during your TapFocus session."
+                    "That app is locked during your LoqOut session."
                 } else {
-                    "$blockedPackage is locked.\nReturn to TapFocus to continue focusing."
+                    "$blockedPackage is locked.\nReturn to LoqOut to continue focusing."
                 }
                 textSize = 15f
                 setTextColor(Color.parseColor("#333333"))
@@ -102,7 +101,7 @@ object TapFocusIntervention {
                 setPadding(0, pad / 2, 0, pad)
             }
             val button = Button(context).apply {
-                text = "Return to TapFocus"
+                text = "Return to LoqOut"
                 setOnClickListener {
                     bringAppToForeground(context)
                     dismissOverlay(wm)

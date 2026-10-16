@@ -153,18 +153,22 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         val manager = getSystemService(NotificationManager::class.java) ?: return
+        val channelName = "LoqOut"
         val existing = manager.getNotificationChannel(channelId)
-        if (existing != null) {
+        if (existing != null && existing.name == channelName) {
             Log.d(TAG, "Notification channel already exists: $channelId")
             return
+        }
+        if (existing != null) {
+            manager.deleteNotificationChannel(channelId)
         }
 
         val channel = NotificationChannel(
             channelId,
-            "TapFocus Focus Watchdog",
+            channelName,
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows while a TapFocus session is actively protecting your attention"
+            description = "Shows while a LoqOut session is actively protecting your attention"
             setShowBadge(false)
             enableVibration(false)
             setSound(null, null)

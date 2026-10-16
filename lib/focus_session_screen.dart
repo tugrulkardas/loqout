@@ -39,6 +39,13 @@ class FocusSessionScreen extends StatefulWidget {
   final List<String> blockedPackages;
   final List<String> blockedAppNames;
 
+  /// True when reopening a session that is already enforced.
+  /// Skips a second kickoff so the lock screen is shown immediately.
+  final bool resumeActiveSession;
+
+  /// Draft captured at process start. Null for a freshly authenticated session.
+  final FocusSessionRecord? resumedRecord;
+
   const FocusSessionScreen({
     super.key,
     required this.nfcUid,
@@ -50,7 +57,25 @@ class FocusSessionScreen extends StatefulWidget {
     required this.energy,
     required this.blockedPackages,
     required this.blockedAppNames,
+    this.resumeActiveSession = false,
+    this.resumedRecord,
   });
+
+  factory FocusSessionScreen.resume(FocusSessionRecord record) {
+    return FocusSessionScreen(
+      nfcUid: record.nfcUid,
+      startQuadrant: record.moodQuadrant,
+      intensity: record.intensity,
+      moodX: record.moodX,
+      moodY: record.moodY,
+      valence: record.valence,
+      energy: record.energy,
+      blockedPackages: List<String>.from(record.blockedPackages),
+      blockedAppNames: List<String>.from(record.blockedAppNames),
+      resumeActiveSession: true,
+      resumedRecord: record,
+    );
+  }
 
   @override
   State<FocusSessionScreen> createState() => _FocusSessionScreenState();
@@ -81,7 +106,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _blockedAppNames = List<String>.from(widget.blockedAppNames);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _listenForViolations();
-      _startFocusSession();
+      if (widget.resumeActiveSession) {
+        _resumeLockedSession();
+      } else {
+        _startFocusSession();
+      }
     });
   }
 
@@ -208,6 +237,53 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         );
       }
       return false;
+    }
+  }
+
+  /// Restores the lock screen after the UI process was recreated mid-session.
+  Future<void> _resumeLockedSession() async {
+    if (_startingSession || isSessionActive) return;
+    setState(() => _startingSession = true);
+    try {
+      final draft = await _sessions.loadActiveDraft();
+      final record = (draft != null && draft.endedAt == null)
+          ? draft
+          : widget.resumedRecord;
+      if (record == null) {
+        if (mounted) setState(() => _startingSession = false);
+        return;
+      }
+
+      if (record.blockedPackages.isNotEmpty) {
+        _blockedPackages = List<String>.from(record.blockedPackages);
+        _blockedAppNames = List<String>.from(record.blockedAppNames);
+      }
+
+      if (!useDesktopMockLauncherApps) {
+        final running = await FlutterBackgroundService().isRunning();
+        if (!running) {
+          final started = await startWatchdogService(
+            blockedApps: _blockedPackages,
+            resetInterventionCount: false,
+          );
+          if (!started) {
+            debugPrint('Could not reattach focus watchdog while resuming');
+          }
+        }
+      }
+
+      final count = await _sessions.readInterventionCount();
+      if (!mounted) return;
+      setState(() {
+        isSessionActive = true;
+        _startingSession = false;
+        _activeRecord = record;
+        _sessionStartedAt = record.startedAt;
+        _interventionCount = count;
+      });
+    } catch (e) {
+      debugPrint('Resume locked session failed: $e');
+      if (mounted) setState(() => _startingSession = false);
     }
   }
 
