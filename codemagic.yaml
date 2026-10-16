@@ -37,31 +37,30 @@ workflows:
       - name: Build signed IPA
         script: |
           set -euo pipefail
-          if [ -z "${APP_STORE_APPLE_ID:-}" ]; then
-            echo "Set APP_STORE_APPLE_ID in the Codemagic workflow variables."
-            echo "App Store Connect → LoqOut → App Information → Apple ID."
-            exit 1
+          # App Store Connect already consumed CFBundleVersion 1. A rejected
+          # upload still counts. If the TestFlight lookup is missing or prints
+          # 0, the package must still be 2 or higher.
+          BUILD_NUMBER=2
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            set +e
+            RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions 2>/tmp/asc-build-lookup.txt)
+            STATUS=$?
+            set -e
+            echo "TestFlight lookup status: $STATUS"
+            echo "TestFlight lookup stdout: [$RAW]"
+            cat /tmp/asc-build-lookup.txt || true
+            if [ "$STATUS" -eq 0 ] && printf '%s' "$RAW" | grep -Eq '^[0-9]+$'; then
+              NEXT=$((RAW + 1))
+              if [ "$NEXT" -gt "$BUILD_NUMBER" ]; then
+                BUILD_NUMBER=$NEXT
+              fi
+            fi
+          else
+            echo "APP_STORE_APPLE_ID is not set. Using bundle version $BUILD_NUMBER."
           fi
-          # Build 1 is already registered in App Store Connect. A rejected
-          # upload still consumes that number, and the TestFlight lookup
-          # returns 0 when the build never finished processing.
-          RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions)
-          echo "TestFlight lookup: [$RAW]"
-          LATEST=$(printf '%s\n' "$RAW" | grep -Eo '[0-9]+' | tail -n 1)
-          echo "Latest TestFlight bundle version: [${LATEST}]"
-          case "$LATEST" in
-            ''|*[!0-9]*)
-              echo "Could not read a numeric TestFlight build number."
-              exit 1
-              ;;
-          esac
-          BUILD_NUMBER=$((LATEST + 1))
-          if [ "$BUILD_NUMBER" -lt 2 ]; then
-            BUILD_NUMBER=2
-          fi
-          echo "Next bundle version: $BUILD_NUMBER"
-          # Runner reads FLUTTER_BUILD_NUMBER. The shield extension and tests
-          # do not, so stamp every literal project version.
+          echo "CFBundleVersion that will be uploaded: $BUILD_NUMBER"
+          # Runner reads FLUTTER_BUILD_NUMBER from the Flutter xcconfig.
+          # The shield extension does not, so stamp its literal version too.
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" ios/Runner.xcodeproj/project.pbxproj
           flutter build ipa --release \
             --build-name=1.0.0 \
@@ -70,10 +69,20 @@ workflows:
           IPA=$(echo build/ios/ipa/*.ipa)
           TMP=$(mktemp -d)
           unzip -q "$IPA" -d "$TMP"
-          BUNDLE_VERSION=$(plutil -extract CFBundleVersion raw -o - "$TMP"/Payload/*.app/Info.plist)
-          echo "IPA CFBundleVersion: $BUNDLE_VERSION"
-          if [ "$BUNDLE_VERSION" != "$BUILD_NUMBER" ]; then
-            echo "IPA bundle version is $BUNDLE_VERSION, expected $BUILD_NUMBER."
+          APP_PLIST=$(find "$TMP/Payload" -maxdepth 2 -name Info.plist -path '*.app/Info.plist' ! -path '*.appex/*' | head -n 1)
+          EXT_PLIST=$(find "$TMP/Payload" -name Info.plist -path '*.appex/Info.plist' | head -n 1)
+          APP_VERSION=$(plutil -extract CFBundleVersion raw -o - "$APP_PLIST")
+          EXT_VERSION=$(plutil -extract CFBundleVersion raw -o - "$EXT_PLIST")
+          APP_SHORT=$(plutil -extract CFBundleShortVersionString raw -o - "$APP_PLIST")
+          EXT_SHORT=$(plutil -extract CFBundleShortVersionString raw -o - "$EXT_PLIST")
+          echo "App CFBundleVersion: $APP_VERSION ($APP_SHORT)"
+          echo "Extension CFBundleVersion: $EXT_VERSION ($EXT_SHORT)"
+          if [ "$APP_VERSION" != "$BUILD_NUMBER" ] || [ "$EXT_VERSION" != "$BUILD_NUMBER" ]; then
+            echo "Refusing to publish. Expected bundle version $BUILD_NUMBER."
+            exit 1
+          fi
+          if [ "$APP_SHORT" != "$EXT_SHORT" ]; then
+            echo "Refusing to publish. App and extension short versions differ."
             exit 1
           fi
     artifacts:
