@@ -1,1 +1,6 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+// Overrides CONFIGURATION and any inherited FLUTTER_BUILD_MODE.
+// Without this, a debug value in the environment makes TestFlight launch
+// the JIT engine, which iOS refuses to start from the home screen.
+FLUTTER_BUILD_MODE=release

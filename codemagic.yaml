@@ -37,10 +37,9 @@ workflows:
       - name: Build signed IPA
         script: |
           set -euo pipefail
-          # App Store Connect already consumed CFBundleVersion 1. A rejected
-          # upload still counts. If the TestFlight lookup is missing or prints
-          # 0, the package must still be 2 or higher.
-          BUILD_NUMBER=2
+          # Builds 1 and 2 are already on App Store Connect. A rejected upload
+          # still consumes the number. Never fall below 3.
+          BUILD_NUMBER=3
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
             set +e
             RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions 2>/tmp/asc-build-lookup.txt)
@@ -59,9 +58,16 @@ workflows:
             echo "APP_STORE_APPLE_ID is not set. Using bundle version $BUILD_NUMBER."
           fi
           echo "CFBundleVersion that will be uploaded: $BUILD_NUMBER"
+          if ! grep -A1 '<ArchiveAction' ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme | grep -q 'buildConfiguration = "Release"'; then
+            echo "Runner archive configuration is not Release."
+            exit 1
+          fi
           # Runner reads FLUTTER_BUILD_NUMBER from the Flutter xcconfig.
           # The shield extension does not, so stamp its literal version too.
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" ios/Runner.xcodeproj/project.pbxproj
+          # Xcode script phases prefer this variable over the configuration name.
+          # Release.xcconfig also sets it, so a leftover debug value cannot win.
+          export FLUTTER_BUILD_MODE=release
           flutter build ipa --release \
             --build-name=1.0.0 \
             --build-number="$BUILD_NUMBER" \
@@ -83,6 +89,10 @@ workflows:
           fi
           if [ "$APP_SHORT" != "$EXT_SHORT" ]; then
             echo "Refusing to publish. App and extension short versions differ."
+            exit 1
+          fi
+          if find "$TMP" -name kernel_blob.bin -print -quit | grep -q kernel_blob.bin; then
+            echo "Refusing to publish. This IPA contains a Flutter debug snapshot."
             exit 1
           fi
     artifacts:
