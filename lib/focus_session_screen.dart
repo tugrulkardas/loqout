@@ -259,7 +259,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         _blockedAppNames = List<String>.from(record.blockedAppNames);
       }
 
-      if (!useDesktopMockLauncherApps) {
+      if (IosShieldService.isSupported) {
+        await IosShieldService.instance.restoreShield();
+      } else if (!useDesktopMockLauncherApps) {
         final running = await FlutterBackgroundService().isRunning();
         if (!running) {
           final started = await startWatchdogService(

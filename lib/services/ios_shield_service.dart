@@ -96,6 +96,30 @@ class IosShieldService {
     return summary();
   }
 
+  /// True when a focus session already applied the shield. Reads the App
+  /// Group flag only. Does not request Family Controls authorization.
+  Future<bool> isSessionActive() async {
+    if (!isSupported) return false;
+    try {
+      final raw = await _channel.invokeMethod<bool>('isSessionActive');
+      return raw ?? false;
+    } on PlatformException catch (e, st) {
+      debugPrint('isSessionActive failed: ${e.code} ${e.message}\n$st');
+      return false;
+    }
+  }
+
+  /// Puts an already-started shield back in place after the UI process died.
+  /// Does not begin a new session.
+  Future<void> restoreShield() async {
+    if (!isSupported) return;
+    try {
+      await _channel.invokeMethod<void>('restoreShield');
+    } on PlatformException catch (e, st) {
+      debugPrint('restoreShield failed: ${e.code} ${e.message}\n$st');
+    }
+  }
+
   Future<void> stopShield() async {
     if (!isSupported) return;
     try {

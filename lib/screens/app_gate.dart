@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../focus_session_screen.dart';
+import '../models/app_models.dart';
 import '../models/session_telemetry.dart';
+import '../services/ios_shield_service.dart';
 import '../services/permission_service.dart';
 import '../services/session_repository.dart';
 import '../theme/tapfocus_theme.dart';
@@ -47,25 +49,14 @@ class _AppGateState extends State<AppGate> {
   Future<void> _evaluate() async {
     if (!mounted) return;
 
-    // Enforcement permissions are Android-only; skip the gate elsewhere.
-    if (!_requiresAndroidPermissions) {
-      setState(() {
-        _permissionsOk = true;
-        _ready = true;
-      });
-      return;
-    }
-
-    PermissionSnapshot snapshot;
-    try {
-      snapshot = await widget.permissionService.checkAll();
-    } catch (e, st) {
-      debugPrint('AppGate permission evaluation failed: $e\n$st');
-      snapshot = const PermissionSnapshot(
-        usageStats: false,
-        systemAlertWindow: false,
-        notifications: false,
-      );
+    var permissionsOk = true;
+    if (_requiresAndroidPermissions) {
+      try {
+        permissionsOk = (await widget.permissionService.checkAll()).allGranted;
+      } catch (e, st) {
+        debugPrint('AppGate permission evaluation failed: $e\n$st');
+        permissionsOk = false;
+      }
     }
 
     FocusSessionRecord? active;
@@ -76,10 +67,32 @@ class _AppGateState extends State<AppGate> {
       debugPrint('AppGate active session lookup failed: $e\n$st');
     }
 
+    if (active == null && IosShieldService.isSupported) {
+      try {
+        if (await IosShieldService.instance.isSessionActive()) {
+          active = FocusSessionRecord(
+            id: 'sess_ios_restore',
+            nfcUid: 'ios:restore',
+            moodQuadrant: MoodQuadrant.yellow,
+            valence: 1,
+            energy: 1,
+            intensity: 1,
+            moodX: 5,
+            moodY: 4,
+            blockedPackages: const ['ios.familycontrols.applications'],
+            blockedAppNames: const [],
+            startedAt: DateTime.now(),
+          );
+        }
+      } catch (e, st) {
+        debugPrint('AppGate iOS shield lookup failed: $e\n$st');
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _activeSession = active;
-      _permissionsOk = snapshot.allGranted;
+      _permissionsOk = permissionsOk;
       _ready = true;
     });
   }

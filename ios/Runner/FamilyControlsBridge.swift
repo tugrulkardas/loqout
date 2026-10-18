@@ -51,6 +51,14 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
     case "stopShield":
       LoqOutShieldStore.endSession()
       result(nil)
+    case "isSessionActive":
+      result(LoqOutShieldStore.isSessionActive)
+    case "restoreShield":
+      LoqOutShieldStore.reapplyIfSessionActive()
+      if LoqOutShieldStore.isSessionActive {
+        try? LoqOutShieldStore.rearmMonitor()
+      }
+      result(LoqOutShieldStore.isSessionActive)
     default:
       result(FlutterMethodNotImplemented)
     }

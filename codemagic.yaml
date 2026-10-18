@@ -13,6 +13,7 @@ workflows:
       vars:
         BUNDLE_ID: com.loqout.app
         EXTENSION_BUNDLE_ID: com.loqout.app.DeviceActivityMonitor
+        SHIELD_CONFIGURATION_BUNDLE_ID: com.loqout.app.ShieldConfiguration
     scripts:
       - name: Flutter packages
         script: flutter pub get
@@ -32,14 +33,17 @@ workflows:
           app-store-connect fetch-signing-files "$EXTENSION_BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
+          app-store-connect fetch-signing-files "$SHIELD_CONFIGURATION_BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
           keychain add-certificates
           xcode-project use-profiles
       - name: Build signed IPA
         script: |
           set -euo pipefail
-          # Builds 1 through 3 are already on App Store Connect. A rejected
-          # upload still consumes the number. Never fall below 4.
-          BUILD_NUMBER=4
+          # Builds 1 through 4 are already on App Store Connect. A rejected
+          # upload still consumes the number. Never fall below 5.
+          BUILD_NUMBER=5
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
             set +e
             RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions 2>/tmp/asc-build-lookup.txt)
@@ -76,21 +80,22 @@ workflows:
           TMP=$(mktemp -d)
           unzip -q "$IPA" -d "$TMP"
           APP_PLIST=$(find "$TMP/Payload" -maxdepth 2 -name Info.plist -path '*.app/Info.plist' ! -path '*.appex/*' | head -n 1)
-          EXT_PLIST=$(find "$TMP/Payload" -name Info.plist -path '*.appex/Info.plist' | head -n 1)
           APP_VERSION=$(plutil -extract CFBundleVersion raw -o - "$APP_PLIST")
-          EXT_VERSION=$(plutil -extract CFBundleVersion raw -o - "$EXT_PLIST")
           APP_SHORT=$(plutil -extract CFBundleShortVersionString raw -o - "$APP_PLIST")
-          EXT_SHORT=$(plutil -extract CFBundleShortVersionString raw -o - "$EXT_PLIST")
           echo "App CFBundleVersion: $APP_VERSION ($APP_SHORT)"
-          echo "Extension CFBundleVersion: $EXT_VERSION ($EXT_SHORT)"
-          if [ "$APP_VERSION" != "$BUILD_NUMBER" ] || [ "$EXT_VERSION" != "$BUILD_NUMBER" ]; then
+          if [ "$APP_VERSION" != "$BUILD_NUMBER" ]; then
             echo "Refusing to publish. Expected bundle version $BUILD_NUMBER."
             exit 1
           fi
-          if [ "$APP_SHORT" != "$EXT_SHORT" ]; then
-            echo "Refusing to publish. App and extension short versions differ."
-            exit 1
-          fi
+          while IFS= read -r EXT_PLIST; do
+            EXT_VERSION=$(plutil -extract CFBundleVersion raw -o - "$EXT_PLIST")
+            EXT_SHORT=$(plutil -extract CFBundleShortVersionString raw -o - "$EXT_PLIST")
+            echo "Extension CFBundleVersion: $EXT_VERSION ($EXT_SHORT) $EXT_PLIST"
+            if [ "$EXT_VERSION" != "$BUILD_NUMBER" ] || [ "$APP_SHORT" != "$EXT_SHORT" ]; then
+              echo "Refusing to publish. Extension version does not match the app."
+              exit 1
+            fi
+          done < <(find "$TMP/Payload" -name Info.plist -path '*.appex/Info.plist')
           if find "$TMP" -name kernel_blob.bin -print -quit | grep -q kernel_blob.bin; then
             echo "Refusing to publish. This IPA contains a Flutter debug snapshot."
             exit 1
