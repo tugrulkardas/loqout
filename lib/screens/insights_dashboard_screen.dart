@@ -9,6 +9,7 @@ import '../models/session_telemetry.dart';
 import '../services/beta_telemetry_export.dart';
 import '../services/demo_telemetry_seeder.dart';
 import '../services/insights_service.dart';
+import '../services/launcher_apps_service.dart';
 import '../theme/tapfocus_theme.dart';
 import '../widgets/language_menu_button.dart';
 import '../widgets/product_motto.dart';
@@ -448,7 +449,8 @@ class _MoodDistractionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final l10n = context.l10n;
-    final top = snapshot.topTriggerQuadrant;
+    final attemptsAreMeasured = !useDesktopMockLauncherApps;
+    final top = attemptsAreMeasured ? snapshot.topTriggerQuadrant : null;
     final topCount = snapshot.topTriggerInterventionCount;
     final topMood = top == null
         ? null
@@ -463,23 +465,26 @@ class _MoodDistractionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (top != null && topMood != null) ...[
-            Text.rich(
-              TextSpan(
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.45,
-                  color: c.textPrimary,
-                ),
-                children: [
-                  TextSpan(
-                    text: l10n.insightsVulnerability(topMood, topCount),
-                  ),
-                ],
+          if (!attemptsAreMeasured || top == null || topMood == null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                l10n.insightsNotEnoughData,
+                style: TextStyle(color: c.textSecondary, fontSize: 13),
+              ),
+            )
+          else ...[
+            Text(
+              l10n.insightsVulnerability(topMood, topCount),
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.45,
+                color: c.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
           ],
+          if (attemptsAreMeasured) ...[
           for (final q in MoodQuadrant.values)
             _BarRow(
               label: localizeMoodLabel(
@@ -493,6 +498,7 @@ class _MoodDistractionCard extends StatelessWidget {
                 (a, b) => a > b ? a : b,
               ),
             ),
+          ],
         ],
       ),
     );
@@ -642,6 +648,7 @@ class _EmotionalDeltaCard extends StatelessWidget {
     final c = context.colors;
     final l10n = context.l10n;
     final hasDelta = snapshot.postMoodSampleSize > 0;
+    final belowThreshold = snapshot.postMoodSampleSize < kMoodShiftMinCheckIns;
     final story = snapshot.moodShiftStory;
     final start = snapshot.typicalStartMood;
     final end = snapshot.typicalEndMood;
@@ -681,7 +688,9 @@ class _EmotionalDeltaCard extends StatelessWidget {
               startLabel == null ||
               endLabel == null
           ? Text(
-              l10n.insightsBeforeAfterEmpty,
+              hasDelta && belowThreshold
+                  ? l10n.insightsNotEnoughData
+                  : l10n.insightsBeforeAfterEmpty,
               style: TextStyle(
                 color: c.textSecondary,
                 fontSize: 13,
@@ -735,6 +744,19 @@ class _EmotionalDeltaCard extends StatelessWidget {
   }
 }
 
+String _peakAdvice(AppLocalizations l10n, FocusDaypart daypart) {
+  switch (daypart) {
+    case FocusDaypart.morning:
+      return l10n.insightsPeakMorning;
+    case FocusDaypart.afternoon:
+      return l10n.insightsPeakAfternoon;
+    case FocusDaypart.evening:
+      return l10n.insightsPeakEvening;
+    case FocusDaypart.night:
+      return l10n.insightsPeakNight;
+  }
+}
+
 String _daypartLabel(AppLocalizations l10n, FocusDaypart daypart) {
   switch (daypart) {
     case FocusDaypart.morning:
@@ -763,7 +785,7 @@ class _PeakFocusCard extends StatelessWidget {
       subtitle: 'When your uninterrupted sessions run longest',
       child: peak == null
           ? Text(
-              'Need a few completed sessions with duration data.',
+              l10n.insightsNotEnoughData,
               style: TextStyle(
                 color: c.textSecondary,
                 fontSize: 13,
@@ -782,7 +804,7 @@ class _PeakFocusCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  peak.coachAdvice,
+                  _peakAdvice(l10n, peak),
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.4,

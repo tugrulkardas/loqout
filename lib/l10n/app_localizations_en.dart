@@ -567,6 +567,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete a post-session check-in to unlock your mood story.';
 
   @override
+  String get insightsNotEnoughData => 'Not enough data yet.';
+
+  @override
+  String get insightsPeakMorning =>
+      'Morning is your superpower. Schedule your hardest deep work before noon.';
+
+  @override
+  String get insightsPeakAfternoon =>
+      'Your focus peaks after lunch. Block distractions and protect that window.';
+
+  @override
+  String get insightsPeakEvening =>
+      'Evenings are when you lock in. Guard that block from meetings and scroll traps.';
+
+  @override
+  String get insightsPeakNight =>
+      'You are a night owl. Protect your evening focus blocks.';
+
+  @override
   String insightsShiftFromTo(String start, String end) {
     return 'You mostly shift from $start  →  $end.';
   }

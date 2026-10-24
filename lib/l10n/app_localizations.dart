@@ -1010,6 +1010,36 @@ abstract class AppLocalizations {
   /// **'Complete a post-session check-in to unlock your mood story.'**
   String get insightsBeforeAfterEmpty;
 
+  /// No description provided for @insightsNotEnoughData.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough data yet.'**
+  String get insightsNotEnoughData;
+
+  /// No description provided for @insightsPeakMorning.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning is your superpower. Schedule your hardest deep work before noon.'**
+  String get insightsPeakMorning;
+
+  /// No description provided for @insightsPeakAfternoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Your focus peaks after lunch. Block distractions and protect that window.'**
+  String get insightsPeakAfternoon;
+
+  /// No description provided for @insightsPeakEvening.
+  ///
+  /// In en, this message translates to:
+  /// **'Evenings are when you lock in. Guard that block from meetings and scroll traps.'**
+  String get insightsPeakEvening;
+
+  /// No description provided for @insightsPeakNight.
+  ///
+  /// In en, this message translates to:
+  /// **'You are a night owl. Protect your evening focus blocks.'**
+  String get insightsPeakNight;
+
   /// No description provided for @insightsShiftFromTo.
   ///
   /// In en, this message translates to:

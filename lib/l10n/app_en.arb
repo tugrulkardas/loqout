@@ -286,6 +286,11 @@
   "insightsBeforeAfterTitle": "Before & after",
   "insightsBeforeAfterSubtitle": "How focus sessions reshape how you feel",
   "insightsBeforeAfterEmpty": "Complete a post-session check-in to unlock your mood story.",
+  "insightsNotEnoughData": "Not enough data yet.",
+  "insightsPeakMorning": "Morning is your superpower. Schedule your hardest deep work before noon.",
+  "insightsPeakAfternoon": "Your focus peaks after lunch. Block distractions and protect that window.",
+  "insightsPeakEvening": "Evenings are when you lock in. Guard that block from meetings and scroll traps.",
+  "insightsPeakNight": "You are a night owl. Protect your evening focus blocks.",
   "insightsShiftFromTo": "You mostly shift from {start}  →  {end}.",
   "@insightsShiftFromTo": {
     "placeholders": {

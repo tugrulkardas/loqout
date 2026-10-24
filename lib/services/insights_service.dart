@@ -1,6 +1,19 @@
 import '../models/app_models.dart';
 import '../models/session_telemetry.dart';
+import 'focus_stats.dart';
 import 'session_repository.dart';
+
+/// Peak-focus copy is withheld until this many completed sessions exist.
+const int kPeakMinCompletedSessions = 5;
+
+/// Those sessions must also fall on at least this many different local days.
+const int kPeakMinDistinctDays = 3;
+
+/// Before & after is withheld until this many post-mood check-ins exist.
+const int kMoodShiftMinCheckIns = 5;
+
+/// The vulnerability sentence is withheld until this many recorded attempts.
+const int kTriggerMinInterventions = 5;
 
 enum FocusDaypart { morning, afternoon, evening, night }
 
@@ -188,7 +201,7 @@ class InsightsService {
         topTrigger = entry.key;
       }
     }
-    if (topCount <= 0) topTrigger = null;
+    if (topCount < kTriggerMinInterventions) topTrigger = null;
 
     final last7 = sessions.where((s) => !s.startedAt.isBefore(weekAgo));
     final interventionsLast7Days =
@@ -197,6 +210,9 @@ class InsightsService {
         interventionsLast7Days * minutesSavedPerIntervention;
 
     final withPost = sessions.where((s) => s.hasPostMood).toList();
+    final withAxes = withPost
+        .where((s) => s.postValence != null && s.postEnergy != null)
+        .toList();
     double? avgValence;
     double? avgEnergy;
     MoodQuadrant? typicalStart;
@@ -204,64 +220,47 @@ class InsightsService {
     String? typicalStartLabel;
     String? typicalEndLabel;
     MoodShiftStory? moodStory;
-    if (withPost.isNotEmpty) {
-      avgValence = withPost
-              .map((s) => s.valenceDelta ?? 0)
-              .reduce((a, b) => a + b) /
-          withPost.length;
-      avgEnergy = withPost
-              .map((s) => s.energyDelta ?? 0)
-              .reduce((a, b) => a + b) /
-          withPost.length;
+    if (withAxes.isNotEmpty) {
+      final startValence = _mean(withAxes.map((s) => s.valence));
+      final startEnergy = _mean(withAxes.map((s) => s.energy));
+      final endValence = _mean(withAxes.map((s) => s.postValence!));
+      final endEnergy = _mean(withAxes.map((s) => s.postEnergy!));
+      avgValence = endValence - startValence;
+      avgEnergy = endEnergy - startEnergy;
 
-      // Most common start → end pair for the "You mostly shift…" line.
-      final pairCounts = <String, int>{};
-      final pairLookup = <String, (MoodQuadrant, MoodQuadrant)>{};
-      final pairSample = <String, FocusSessionRecord>{};
-      for (final s in withPost) {
-        final end = s.postMoodQuadrant!;
-        final key = '${s.moodQuadrant.name}->${end.name}';
-        pairCounts[key] = (pairCounts[key] ?? 0) + 1;
-        pairLookup[key] = (s.moodQuadrant, end);
-        pairSample.putIfAbsent(key, () => s);
-      }
-      var bestKey = pairCounts.keys.first;
-      var bestCount = 0;
-      for (final entry in pairCounts.entries) {
-        if (entry.value > bestCount) {
-          bestCount = entry.value;
-          bestKey = entry.key;
+      // Headline and arrow use this same average. A modal pair is not shown
+      // on its own, because it can point the opposite way from the average.
+      if (withAxes.length >= kMoodShiftMinCheckIns) {
+        final startV = startValence.round().clamp(-5, 5);
+        final startE = startEnergy.round().clamp(-5, 5);
+        final endV = endValence.round().clamp(-5, 5);
+        final endE = endEnergy.round().clamp(-5, 5);
+        typicalStartLabel = MoodAxes.getMoodLabel(startV, startE);
+        typicalEndLabel = MoodAxes.getMoodLabel(endV, endE);
+        typicalStart = _quadrantForAxes(startV, startE);
+        typicalEnd = _quadrantForAxes(endV, endE);
+        if (avgValence > 0.35) {
+          moodStory = MoodShiftStory.improves;
+        } else if (avgValence < -0.35) {
+          moodStory = MoodShiftStory.declines;
+        } else {
+          moodStory = MoodShiftStory.steadies;
         }
-      }
-      final pair = pairLookup[bestKey]!;
-      typicalStart = pair.$1;
-      typicalEnd = pair.$2;
-      final sample = pairSample[bestKey]!;
-      typicalStartLabel = MoodAxes.getMoodLabel(sample.valence, sample.energy);
-      final postV = sample.postValence;
-      final postE = sample.postEnergy;
-      typicalEndLabel = (postV != null && postE != null)
-          ? MoodAxes.getMoodLabel(postV, postE)
-          : MoodAxes.representativeLabelForQuadrant(typicalEnd);
-
-      // Mood "better" ≈ higher valence; near-zero = steadies.
-      if (avgValence > 0.35) {
-        moodStory = MoodShiftStory.improves;
-      } else if (avgValence < -0.35) {
-        moodStory = MoodShiftStory.declines;
-      } else {
-        moodStory = MoodShiftStory.steadies;
       }
     }
 
     final daypartTotals = {for (final d in FocusDaypart.values) d: 0.0};
     final daypartCounts = {for (final d in FocusDaypart.values) d: 0};
+    final peakDays = <String>{};
     for (final s in sessions) {
+      if (s.completionStatus != SessionCompletionStatus.completed) continue;
       final minutes = (s.durationMinutes ?? 0).toDouble();
       if (minutes <= 0) continue;
-      final part = FocusDaypartLabel.fromHour(s.startedAt.hour);
+      final part = FocusDaypartLabel.fromHour(s.startedAt.toLocal().hour);
       daypartTotals[part] = daypartTotals[part]! + minutes;
       daypartCounts[part] = daypartCounts[part]! + 1;
+      final day = sessionEndDateKey(s) ?? focusLocalDateKey(s.startedAt);
+      peakDays.add(day);
     }
     final daypartAvg = <FocusDaypart, double>{};
     for (final d in FocusDaypart.values) {
@@ -277,7 +276,12 @@ class InsightsService {
         peak = entry.key;
       }
     }
-    if (peakAvg <= 0) peak = null;
+    final completedForPeak = daypartCounts.values.fold<int>(0, (a, b) => a + b);
+    if (peakAvg <= 0 ||
+        completedForPeak < kPeakMinCompletedSessions ||
+        peakDays.length < kPeakMinDistinctDays) {
+      peak = null;
+    }
 
     return InsightsSnapshot(
       computedAt: computedAt,
@@ -289,7 +293,7 @@ class InsightsService {
       savedAttentionMinutes: savedAttentionMinutes,
       avgValenceDelta: avgValence,
       avgEnergyDelta: avgEnergy,
-      postMoodSampleSize: withPost.length,
+      postMoodSampleSize: withAxes.length,
       typicalStartMood: typicalStart,
       typicalEndMood: typicalEnd,
       typicalStartMoodLabel: typicalStartLabel,
@@ -300,4 +304,19 @@ class InsightsService {
       daypartAvgMinutes: daypartAvg,
     );
   }
+}
+
+double _mean(Iterable<int> values) {
+  final list = values.toList();
+  if (list.isEmpty) return 0;
+  return list.reduce((a, b) => a + b) / list.length;
+}
+
+MoodQuadrant _quadrantForAxes(int valence, int energy) {
+  final pleasant = valence >= 0;
+  final high = energy >= 0;
+  if (high && pleasant) return MoodQuadrant.yellow;
+  if (high && !pleasant) return MoodQuadrant.red;
+  if (!high && pleasant) return MoodQuadrant.green;
+  return MoodQuadrant.blue;
 }

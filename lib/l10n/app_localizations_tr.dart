@@ -563,6 +563,25 @@ class AppLocalizationsTr extends AppLocalizations {
       'Karşılaştırmayı görmek için oturum sonu kontrolünü tamamlayın.';
 
   @override
+  String get insightsNotEnoughData => 'Henüz yeterli veri yok.';
+
+  @override
+  String get insightsPeakMorning =>
+      'Sabah senin gücün. En zor işi öğleden önceye koy.';
+
+  @override
+  String get insightsPeakAfternoon =>
+      'Odağın öğleden sonra yükseliyor. O saati dağınıklıktan koru.';
+
+  @override
+  String get insightsPeakEvening =>
+      'Akşam kilitlendiğin saat. Toplantı ve kaydırmaya kaptırma.';
+
+  @override
+  String get insightsPeakNight =>
+      'Gece kuşu gibisin. Akşam odak bloklarını koru.';
+
+  @override
   String insightsShiftFromTo(String start, String end) {
     return 'En sık geçiş: $start  →  $end.';
   }

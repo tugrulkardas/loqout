@@ -149,14 +149,34 @@ void main() {
       // Energy deltas: (-1 - 3) = -4, (-1 - (-2)) = 1 → avg -1.5
       expect(snap.avgEnergyDelta, closeTo(-1.5, 0.001));
       expect(snap.postMoodSampleSize, 2);
+      expect(snap.moodShiftStory, isNull);
+      expect(snap.typicalStartMoodLabel, isNull);
+      expect(snap.typicalEndMoodLabel, isNull);
+    });
+
+    test('before and after uses the same average as its headline', () {
+      final sessions = [
+        for (var i = 0; i < kMoodShiftMinCheckIns; i++)
+          _session(
+            id: 'mood$i',
+            startedAt: now.subtract(Duration(days: i, hours: 2)),
+            quadrant: MoodQuadrant.green,
+            interventions: 0,
+            durationMinutes: 20,
+            valence: 0,
+            energy: 0,
+            postQuadrant: MoodQuadrant.yellow,
+            postValence: 3,
+            postEnergy: 3,
+          ),
+      ];
+
+      final snap = InsightsService.computeFromSessions(sessions, now: now);
+
       expect(snap.moodShiftStory, MoodShiftStory.improves);
-      expect(snap.moodShiftStory!.headline, 'Focusing improves your mood.');
-      expect(snap.typicalEndMood, MoodQuadrant.green);
-      expect(snap.typicalStartMood, isNotNull);
-      expect(
-        snap.typicalStartMood,
-        anyOf(MoodQuadrant.red, MoodQuadrant.blue),
-      );
+      expect(snap.typicalStartMoodLabel, 'Neutral');
+      expect(snap.typicalEndMoodLabel, 'Thrilled');
+      expect(snap.avgValenceDelta, closeTo(3, 0.001));
     });
 
     test('Card 4: Peak focus window uses longest average daypart', () {
@@ -196,14 +216,73 @@ void main() {
 
       final snap = InsightsService.computeFromSessions(sessions, now: now);
 
-      expect(snap.peakFocusDaypart, FocusDaypart.morning);
+      expect(snap.peakFocusDaypart, isNull);
       expect(snap.peakFocusAvgMinutes, closeTo(55.0, 0.001)); // (60+50)/2
-      expect(
-        snap.peakFocusDaypart!.coachAdvice,
-        contains('Morning is your superpower'),
-      );
       expect(snap.daypartAvgMinutes[FocusDaypart.afternoon], 20);
       expect(snap.daypartAvgMinutes[FocusDaypart.evening], 30);
+    });
+
+    test('peak focus appears after 5 completed sessions on 3 days', () {
+      final sessions = [
+        _session(
+          id: 'm1',
+          startedAt: DateTime(2026, 7, 28, 9, 0),
+          quadrant: MoodQuadrant.green,
+          interventions: 0,
+          durationMinutes: 40,
+        ),
+        _session(
+          id: 'm2',
+          startedAt: DateTime(2026, 7, 29, 8, 0),
+          quadrant: MoodQuadrant.green,
+          interventions: 0,
+          durationMinutes: 50,
+        ),
+        _session(
+          id: 'm3',
+          startedAt: DateTime(2026, 7, 30, 10, 0),
+          quadrant: MoodQuadrant.green,
+          interventions: 0,
+          durationMinutes: 60,
+        ),
+        _session(
+          id: 'a1',
+          startedAt: DateTime(2026, 7, 30, 14, 0),
+          quadrant: MoodQuadrant.yellow,
+          interventions: 0,
+          durationMinutes: 20,
+        ),
+        _session(
+          id: 'early',
+          startedAt: DateTime(2026, 7, 31, 9, 0),
+          quadrant: MoodQuadrant.blue,
+          interventions: 0,
+          durationMinutes: 90,
+        ),
+      ];
+      sessions.last.completionStatus = SessionCompletionStatus.earlyExit;
+
+      final snap = InsightsService.computeFromSessions(sessions, now: now);
+      expect(snap.peakFocusDaypart, isNull);
+
+      sessions.last.completionStatus = SessionCompletionStatus.completed;
+      final ready = InsightsService.computeFromSessions(sessions, now: now);
+      expect(ready.peakFocusDaypart, FocusDaypart.morning);
+    });
+
+    test('vulnerability sentence waits for 5 recorded attempts', () {
+      final sessions = [
+        _session(
+          id: 'few',
+          startedAt: now.subtract(const Duration(hours: 3)),
+          quadrant: MoodQuadrant.red,
+          interventions: 4,
+          durationMinutes: 15,
+        ),
+      ];
+      final snap = InsightsService.computeFromSessions(sessions, now: now);
+      expect(snap.topTriggerQuadrant, isNull);
+      expect(snap.topTriggerInterventionCount, 4);
     });
   });
 
