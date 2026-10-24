@@ -48,13 +48,15 @@ class FocusStats {
     required this.weekFocusMinutes,
     required this.streakDays,
     required this.todayCompletedMinutes,
+    required this.weekCompleted,
   });
 
   const FocusStats.empty()
       : todayFocusMinutes = 0,
         weekFocusMinutes = 0,
         streakDays = 0,
-        todayCompletedMinutes = 0;
+        todayCompletedMinutes = 0,
+        weekCompleted = const [false, false, false, false, false, false, false];
 
   /// All saved focus minutes whose end date is today, including short sessions.
   final int todayFocusMinutes;
@@ -68,6 +70,16 @@ class FocusStats {
   /// Consecutive local days, ending today or yesterday, with at least
   /// [kStreakMinimumFocusMinutes] of completed focus.
   final int streakDays;
+
+  /// Monday-through-Sunday marks for the calendar week containing today.
+  /// A day is true only when completed focus that day reaches
+  /// [kStreakMinimumFocusMinutes].
+  final List<bool> weekCompleted;
+
+  /// Nothing saved this week and no live streak. The lock screen uses this
+  /// for the "start today" empty state.
+  bool get isFreshRecord =>
+      streakDays == 0 && weekFocusMinutes == 0 && todayFocusMinutes == 0;
 
   static FocusStats fromSessions(
     List<FocusSessionRecord> sessions, {
@@ -104,8 +116,56 @@ class FocusStats {
       weekFocusMinutes: weekFocus,
       streakDays: _streakEndingAt(today, completedByDay),
       todayCompletedMinutes: completedByDay[today] ?? 0,
+      weekCompleted: _calendarWeekCompleted(now ?? DateTime.now(), completedByDay),
     );
   }
+}
+
+List<bool> _calendarWeekCompleted(
+  DateTime now,
+  Map<String, int> completedByDay,
+) {
+  final local = now.toLocal();
+  final today = DateTime(local.year, local.month, local.day);
+  final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
+  return [
+    for (var i = 0; i < 7; i++)
+      (completedByDay[focusLocalDateKey(monday.add(Duration(days: i)))] ?? 0) >=
+          kStreakMinimumFocusMinutes,
+  ];
+}
+
+/// Live progress toward today's streak threshold. [fraction] stays in 0...1.
+class StreakRingState {
+  const StreakRingState({
+    required this.fraction,
+    required this.minutesRemaining,
+    required this.reached,
+  });
+
+  final double fraction;
+  final int minutesRemaining;
+  final bool reached;
+}
+
+/// [elapsedMinutes] is wall-clock time in the open session. Past the
+/// threshold the ring stays full instead of wrapping.
+StreakRingState streakRingState({
+  required int todayCompletedMinutes,
+  required double elapsedMinutes,
+}) {
+  final threshold = kStreakMinimumFocusMinutes;
+  if (threshold <= 0) {
+    return const StreakRingState(fraction: 1, minutesRemaining: 0, reached: true);
+  }
+  final toward = todayCompletedMinutes + (elapsedMinutes < 0 ? 0 : elapsedMinutes);
+  final deficit = threshold - toward;
+  final reached = deficit <= 0;
+  return StreakRingState(
+    fraction: (toward / threshold).clamp(0.0, 1.0),
+    minutesRemaining: reached ? 0 : deficit.ceil(),
+    reached: reached,
+  );
 }
 
 int _streakEndingAt(String today, Map<String, int> completedByDay) {

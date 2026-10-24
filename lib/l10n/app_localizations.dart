@@ -674,6 +674,36 @@ abstract class AppLocalizations {
   /// **'Today already counts toward your streak.'**
   String get lockStreakAlready;
 
+  /// No description provided for @lockMinutesToStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes, plural, =1{1 min left to count today} other{{minutes} min left to count today}}'**
+  String lockMinutesToStreak(int minutes);
+
+  /// No description provided for @lockTodayOnStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Today is on your streak ✓'**
+  String get lockTodayOnStreak;
+
+  /// No description provided for @lockStartToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Start today'**
+  String get lockStartToday;
+
+  /// No description provided for @lockUnlockAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get lockUnlockAction;
+
+  /// No description provided for @lockHoldSemanticsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Double-tap to unlock without holding.'**
+  String get lockHoldSemanticsHint;
+
   /// No description provided for @insightsFrictionEstimate.
   ///
   /// In en, this message translates to:

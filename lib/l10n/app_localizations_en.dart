@@ -356,6 +356,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockStreakAlready => 'Today already counts toward your streak.';
 
   @override
+  String lockMinutesToStreak(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: '$minutes min left to count today',
+      one: '1 min left to count today',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockTodayOnStreak => 'Today is on your streak ✓';
+
+  @override
+  String get lockStartToday => 'Start today';
+
+  @override
+  String get lockUnlockAction => 'Unlock';
+
+  @override
+  String get lockHoldSemanticsHint => 'Double-tap to unlock without holding.';
+
+  @override
   String get insightsFrictionEstimate =>
       'Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.';
 

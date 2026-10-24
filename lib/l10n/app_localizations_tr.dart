@@ -354,6 +354,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get lockStreakAlready => 'Bugün zaten seride.';
 
   @override
+  String lockMinutesToStreak(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Bugünü seriye yazmaya $minutes dk kaldı',
+      one: 'Bugünü seriye yazmaya 1 dk kaldı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockTodayOnStreak => 'Bugün seride ✓';
+
+  @override
+  String get lockStartToday => 'Bugün başla';
+
+  @override
+  String get lockUnlockAction => 'Kilidi aç';
+
+  @override
+  String get lockHoldSemanticsHint =>
+      'Basılı tutmadan açmak için çift dokunun.';
+
+  @override
   String get insightsFrictionEstimate =>
       'Yalnızca tahmin. Engellenen her deneme için yaklaşık 15 dakika. Ölçülmüş ekran süresi değildir.';
 

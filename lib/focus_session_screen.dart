@@ -20,7 +20,9 @@ import 'services/session_repository.dart';
 import 'theme/tapfocus_theme.dart';
 import 'widgets/beta_qr_auth_button.dart';
 import 'widgets/emergency_override_dialog.dart';
+import 'widgets/focus_week_strip.dart';
 import 'widgets/hold_to_unlock_button.dart';
+import 'widgets/streak_progress_ring.dart';
 import 'widgets/post_session_mood_prompt.dart';
 
 /// Active focus session surface — no per-session app picker.
@@ -98,6 +100,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   DateTime? _sessionStartedAt;
   Timer? _clock;
   FocusStats _stats = const FocusStats.empty();
+  Map<String, Uint8List> _lockedIcons = const {};
   String? _insight;
   int? _shieldedApps;
   int? _shieldedCategories;
@@ -146,6 +149,24 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       });
     } catch (e, st) {
       debugPrint('Locked screen stats failed: $e\n$st');
+    }
+    await _loadAndroidIcons();
+  }
+
+  Future<void> _loadAndroidIcons() async {
+    if (useDesktopMockLauncherApps || _blockedPackages.isEmpty) return;
+    try {
+      final apps = await LauncherAppsService().loadLaunchableApps();
+      final wanted = _blockedPackages.toSet();
+      final icons = <String, Uint8List>{};
+      for (final app in apps) {
+        final icon = app.icon;
+        if (icon == null || !wanted.contains(app.packageName)) continue;
+        icons[app.packageName] = icon;
+      }
+      if (mounted) setState(() => _lockedIcons = icons);
+    } catch (e, st) {
+      debugPrint('Locked app icons unavailable: $e\n$st');
     }
   }
 
@@ -578,12 +599,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   }
 
   String _streakLine(AppLocalizations l10n) {
-    final elapsed = _previewDurationMinutes();
-    final effect = streakEffectOfEnding(
-      elapsedMinutes: elapsed,
-      todayCompletedMinutes: _stats.todayCompletedMinutes,
-      countsAsCompleted: elapsed >= 2,
-    );
+    final effect = _streakEffect();
     switch (effect) {
       case StreakEndEffect.keepsToday:
         return l10n.lockStreakKeeps;
@@ -667,15 +683,30 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     );
   }
 
+  StreakRingState _ringState() {
+    final start = _sessionStartedAt;
+    final elapsedMinutes = start == null
+        ? 0.0
+        : DateTime.now().difference(start).inSeconds / 60.0;
+    return streakRingState(
+      todayCompletedMinutes: _stats.todayCompletedMinutes,
+      elapsedMinutes: elapsedMinutes < 0 ? 0 : elapsedMinutes,
+    );
+  }
+
   Widget _lockedScaffold(TapFocusColors c, AppLocalizations l10n) {
+    final theme = Theme.of(context);
     final moodEnglish = MoodAxes.getMoodLabel(widget.valence, widget.energy);
     final moodLabel = localizeMoodLabel(l10n, moodEnglish);
     final elapsed = _sessionStartedAt == null
         ? Duration.zero
         : DateTime.now().difference(_sessionStartedAt!);
-    final streakLabel = _stats.streakDays > 0
-        ? l10n.lockStreakDays(_stats.streakDays)
-        : l10n.lockNoStreak;
+    final ring = _ringState();
+    final caption = ring.reached
+        ? l10n.lockTodayOnStreak
+        : l10n.lockMinutesToStreak(ring.minutesRemaining);
+    final atRisk = _streakEffect() == StreakEndEffect.doesNotCountToday &&
+        _stats.streakDays > 0;
     return Scaffold(
       backgroundColor: c.voidBlack,
       appBar: AppBar(
@@ -690,108 +721,67 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final short = constraints.maxHeight < 560;
             return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              padding: EdgeInsets.fromLTRB(24, short ? 4 : 8, 24, 8),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      formatFocusClock(elapsed),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                            color: c.textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                    StreakProgressRing(
+                      progress: ring.fraction,
+                      timeLabel: formatFocusClock(elapsed),
+                      caption: caption,
+                      semanticsLabel: '${l10n.lockThisSession}. '
+                          '${formatFocusClock(elapsed)}. $caption',
+                      diameter: short ? 132 : 164,
+                      reached: ring.reached,
                     ),
-                    Text(
-                      l10n.lockThisSession,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textSecondary),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _insight ?? l10n.lockInsightEmpty,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textPrimary, height: 1.35),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+                    _weekReadout(c, l10n, theme),
+                    _moodCard(c, l10n, theme, moodLabel),
+                    _lockedTargets(c, l10n, theme),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(child: _statChip(c, streakLabel)),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _statChip(
-                            c,
-                            l10n.lockFocusTimeToday(_stats.todayFocusMinutes),
+                        _streakNotice(c, l10n, theme, atRisk),
+                        const SizedBox(height: 8),
+                        HoldToUnlockButton(
+                          label: l10n.lockHoldToUnlock,
+                          semanticsHint: l10n.lockHoldSemanticsHint,
+                          accessibleLabel: l10n.lockUnlockAction,
+                          enabled: !_unlocking,
+                          onUnlocked: _unlockSession,
+                        ),
+                        BetaQrAuthButton(
+                          enabled: !_unlocking,
+                          label: l10n.sessionScanQrUnlock,
+                          quiet: true,
+                          onAuthenticated: () => _unlockSession(),
+                        ),
+                        TextButton.icon(
+                          onPressed:
+                              _unlocking ? null : _onEmergencyUnlockPressed,
+                          icon: Icon(
+                            Icons.local_fire_department_outlined,
+                            size: 18,
+                            color: c.textMuted,
+                          ),
+                          label: Text(l10n.sessionEmergencyUnlock),
+                          style: TextButton.styleFrom(
+                            foregroundColor: c.textSecondary,
+                            visualDensity: VisualDensity.compact,
+                            textStyle: theme.textTheme.bodyMedium,
                           ),
                         ),
+                        if (_unlocking)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textMuted, fontSize: 13),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.sessionMoodLine(moodLabel, widget.intensity),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textPrimary),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _lockedSummary(l10n),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textSecondary),
-                    ),
-                    if (_lastViolationPackage != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        l10n.sessionBlockedAttempt(_lastViolationPackage!),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: c.danger,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-                    Text(
-                      _streakLine(l10n),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: c.textSecondary, height: 1.3),
-                    ),
-                    const SizedBox(height: 10),
-                    HoldToUnlockButton(
-                      label: l10n.lockHoldToUnlock,
-                      enabled: !_unlocking,
-                      onUnlocked: _unlockSession,
-                    ),
-                    const SizedBox(height: 12),
-                    BetaQrAuthButton(
-                      enabled: !_unlocking,
-                      label: l10n.sessionScanQrUnlock,
-                      filled: false,
-                      onAuthenticated: () => _unlockSession(),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: _unlocking ? null : _onEmergencyUnlockPressed,
-                      icon: Icon(Icons.local_fire_department, color: c.warning),
-                      label: Text(
-                        l10n.sessionEmergencyUnlock,
-                        style: TextStyle(color: c.warning),
-                      ),
-                    ),
-                    if (_unlocking)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
                   ],
                 ),
               ),
@@ -802,23 +792,197 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     );
   }
 
-  Widget _statChip(TapFocusColors c, String label) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.surfaceBorder),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: c.textPrimary,
-            fontWeight: FontWeight.w700,
+  StreakEndEffect _streakEffect() {
+    final elapsed = _previewDurationMinutes();
+    return streakEffectOfEnding(
+      elapsedMinutes: elapsed,
+      todayCompletedMinutes: _stats.todayCompletedMinutes,
+      countsAsCompleted: elapsed >= 2,
+    );
+  }
+
+  Widget _weekReadout(TapFocusColors c, AppLocalizations l10n, ThemeData theme) {
+    final fresh = _stats.isFreshRecord;
+    final todayIndex = DateTime.now().weekday - DateTime.monday;
+    final column = Column(
+      children: [
+        Semantics(
+          label: fresh
+              ? l10n.lockStartToday
+              : l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
+          child: ExcludeSemantics(
+            child: FocusWeekStrip(
+              completed: _stats.weekCompleted,
+              todayIndex: todayIndex,
+            ),
           ),
         ),
+        const SizedBox(height: 8),
+        if (fresh)
+          ExcludeSemantics(
+            child: Text(
+              l10n.lockStartToday,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: c.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          )
+        else ...[
+          if (_stats.streakDays > 0)
+            Text(
+              l10n.lockStreakDays(_stats.streakDays),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: c.textPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          Text(
+            l10n.lockFocusTimeToday(_stats.todayFocusMinutes),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(color: c.textSecondary),
+          ),
+        ],
+      ],
+    );
+    return column;
+  }
+
+  Widget _moodCard(
+    TapFocusColors c,
+    AppLocalizations l10n,
+    ThemeData theme,
+    String moodLabel,
+  ) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.surface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: c.cardShadow,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Icon(
+                Icons.circle,
+                size: 10,
+                color: widget.startQuadrant.color,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.sessionMoodLine(moodLabel, widget.intensity),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _insight ?? l10n.lockInsightEmpty,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: c.textSecondary,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _lockedTargets(TapFocusColors c, AppLocalizations l10n, ThemeData theme) {
+    final icons = <Widget>[];
+    if (!useDesktopMockLauncherApps) {
+      for (final package in _blockedPackages) {
+        final bytes = _lockedIcons[package];
+        if (bytes == null) continue;
+        icons.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(7),
+              child: Image.memory(
+                bytes,
+                width: 26,
+                height: 26,
+                gaplessPlayback: true,
+              ),
+            ),
+          ),
+        );
+        if (icons.length == 5) break;
+      }
+    }
+    return Column(
+      children: [
+        if (icons.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: ExcludeSemantics(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: icons,
+              ),
+            ),
+          ),
+        Text(
+          _lockedSummary(l10n),
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: c.textSecondary),
+        ),
+        if (_lastViolationPackage != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            l10n.sessionBlockedAttempt(_lastViolationPackage!),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: c.danger,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _streakNotice(
+    TapFocusColors c,
+    AppLocalizations l10n,
+    ThemeData theme,
+    bool atRisk,
+  ) {
+    final text = Text(
+      _streakLine(l10n),
+      textAlign: TextAlign.center,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: atRisk ? c.warningDeep : c.textMuted,
+        fontWeight: atRisk ? FontWeight.w700 : FontWeight.w500,
+        height: 1.3,
+      ),
+    );
+    if (!atRisk) return text;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.warningDim,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: text,
       ),
     );
   }

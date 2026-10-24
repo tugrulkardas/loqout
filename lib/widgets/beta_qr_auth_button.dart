@@ -31,12 +31,16 @@ class BetaQrAuthButton extends StatelessWidget {
     required this.label,
     this.enabled = true,
     this.filled = false,
+    this.quiet = false,
   });
 
   final Future<void> Function() onAuthenticated;
   final String label;
   final bool enabled;
   final bool filled;
+
+  /// Text-only treatment so another control can stay the primary action.
+  final bool quiet;
 
   Future<void> _handleTap(BuildContext context) async {
     final ok = await scanTapFocusBetaQr(context);
@@ -46,6 +50,18 @@ class BetaQrAuthButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    if (quiet) {
+      return TextButton.icon(
+        onPressed: enabled ? () => _handleTap(context) : null,
+        icon: Icon(Icons.qr_code_scanner, size: 18, color: c.textMuted),
+        label: Text(label),
+        style: TextButton.styleFrom(
+          foregroundColor: c.textSecondary,
+          visualDensity: VisualDensity.compact,
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+      );
+    }
     if (filled) {
       return FilledButton.icon(
         onPressed: enabled ? () => _handleTap(context) : null,

@@ -172,6 +172,16 @@
   "lockStreakKeeps": "Ending now keeps today on your streak.",
   "lockStreakMiss": "Ending now does not count today toward your streak.",
   "lockStreakAlready": "Today already counts toward your streak.",
+  "lockMinutesToStreak": "{minutes, plural, =1{1 min left to count today} other{{minutes} min left to count today}}",
+  "@lockMinutesToStreak": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "lockTodayOnStreak": "Today is on your streak ✓",
+  "lockStartToday": "Start today",
+  "lockUnlockAction": "Unlock",
+  "lockHoldSemanticsHint": "Double-tap to unlock without holding.",
   "insightsFrictionEstimate": "Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.",
   "insightsEstimatedAttention": "Estimated",
   "sessionUnlockHint": "Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.",

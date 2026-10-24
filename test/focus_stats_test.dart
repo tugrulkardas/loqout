@@ -93,6 +93,45 @@ void main() {
     );
   });
 
+  test('ring fills toward the streak threshold and stays full past it', () {
+    final under = streakRingState(todayCompletedMinutes: 6, elapsedMinutes: 2);
+    expect(under.reached, isFalse);
+    expect(under.minutesRemaining, 2);
+    expect(under.fraction, closeTo(0.8, 0.001));
+
+    final partial = streakRingState(todayCompletedMinutes: 0, elapsedMinutes: 0.5);
+    expect(partial.minutesRemaining, 10);
+    expect(partial.fraction, closeTo(0.05, 0.001));
+
+    final over = streakRingState(todayCompletedMinutes: 0, elapsedMinutes: 25);
+    expect(over.reached, isTrue);
+    expect(over.fraction, 1);
+    expect(over.minutesRemaining, 0);
+  });
+
+  test('week strip is Monday through Sunday and only fills completed days', () {
+    final stats = FocusStats.fromSessions(
+      [
+        _ended(id: 'thu', localEndDate: '2026-10-22', minutes: 10),
+        _ended(id: 'short', localEndDate: '2026-10-23', minutes: 9),
+      ],
+      now: now,
+    );
+
+    expect(DateTime(2026, 10, 24).weekday, DateTime.saturday);
+    expect(stats.weekCompleted, [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+    ]);
+    expect(const FocusStats.empty().isFreshRecord, isTrue);
+    expect(stats.isFreshRecord, isFalse);
+  });
+
   test('clock stays numeric', () {
     expect(formatFocusClock(const Duration(minutes: 4, seconds: 2)), '04:02');
     expect(formatFocusClock(const Duration(hours: 1, minutes: 2, seconds: 3)), '1:02:03');
