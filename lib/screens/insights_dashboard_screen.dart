@@ -561,7 +561,7 @@ class _FrictionScoreCard extends StatelessWidget {
     final l10n = context.l10n;
     return _InsightCard(
       title: l10n.insightsFrictionTitle,
-      subtitle: 'Last 7 days · ~15 min avoided per intervention',
+      subtitle: l10n.insightsFrictionEstimate,
       child: Row(
         children: [
           Expanded(
@@ -576,7 +576,7 @@ class _FrictionScoreCard extends StatelessWidget {
               value: hours >= 1
                   ? '${hours.toStringAsFixed(1)}h'
                   : '${snapshot.savedAttentionMinutes}m',
-              label: 'Saved attention',
+              label: l10n.insightsEstimatedAttention,
               emphasize: true,
             ),
           ),

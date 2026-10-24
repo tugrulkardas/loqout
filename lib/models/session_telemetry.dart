@@ -196,6 +196,10 @@ class FocusSessionRecord {
     this.durationMinutes,
     this.scheduledMinutes,
     this.completionStatus = SessionCompletionStatus.completed,
+    this.localEndDate,
+    this.shieldedApplicationCount,
+    this.shieldedCategoryCount,
+    this.shieldedWebDomainCount,
   });
 
   final String id;
@@ -223,6 +227,18 @@ class FocusSessionRecord {
   int? durationMinutes;
   int? scheduledMinutes;
   SessionCompletionStatus completionStatus;
+
+  /// `yyyy-MM-dd` in the timezone where the session ended.
+  ///
+  /// A session that runs across midnight belongs to this end date, not the
+  /// start date. Stored once so a later timezone change does not move the day.
+  String? localEndDate;
+
+  /// Family Controls token counts. Null on Android, where [blockedPackages]
+  /// are real package names. A category count is not an app count.
+  int? shieldedApplicationCount;
+  int? shieldedCategoryCount;
+  int? shieldedWebDomainCount;
 
   bool get hasPostMood => postMoodQuadrant != null;
 
@@ -266,6 +282,10 @@ class FocusSessionRecord {
         'duration_minutes': durationMinutes,
         'scheduled_minutes': scheduledMinutes,
         'completion_status': completionStatus.wireName,
+        'local_end_date': localEndDate,
+        'shielded_application_count': shieldedApplicationCount,
+        'shielded_category_count': shieldedCategoryCount,
+        'shielded_web_domain_count': shieldedWebDomainCount,
       };
 
   /// Flat map for Supabase `focus_sessions` (extra columns ignored if absent).
@@ -333,6 +353,10 @@ class FocusSessionRecord {
       completionStatus: SessionCompletionStatusLabel.fromWire(
         json['completion_status'] as String?,
       ),
+      localEndDate: json['local_end_date'] as String?,
+      shieldedApplicationCount: json['shielded_application_count'] as int?,
+      shieldedCategoryCount: json['shielded_category_count'] as int?,
+      shieldedWebDomainCount: json['shielded_web_domain_count'] as int?,
     );
   }
 }

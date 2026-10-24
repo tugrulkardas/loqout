@@ -129,12 +129,51 @@
   "sessionStartingWatchdog": "Starting focus watchdog…",
   "sessionActivateFailed": "Could not activate focus yet. Check permissions and retry.",
   "sessionRetryActivate": "Retry Activate Focus",
-  "sessionAppsLocked": "{count} apps locked",
+  "sessionAppsLocked": "{count, plural, =1{1 app locked} other{{count} apps locked}}",
   "@sessionAppsLocked": {
     "placeholders": {
       "count": {"type": "int"}
     }
   },
+  "sessionCategoriesLocked": "{count, plural, =1{1 category locked} other{{count} categories locked}}",
+  "@sessionCategoriesLocked": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "sessionWebsitesLocked": "{count, plural, =1{1 website locked} other{{count} websites locked}}",
+  "@sessionWebsitesLocked": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lockThisSession": "This session",
+  "lockFocusTimeToday": "{minutes} min focus time today",
+  "@lockFocusTimeToday": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "lockFocusTimeWeek": "{minutes} min this week",
+  "@lockFocusTimeWeek": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "lockStreakDays": "{count, plural, =1{1-day streak} other{{count}-day streak}}",
+  "@lockStreakDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lockNoStreak": "No streak yet",
+  "lockInsightEmpty": "This session starts your record.",
+  "lockHoldToUnlock": "Hold to unlock",
+  "lockStreakKeeps": "Ending now keeps today on your streak.",
+  "lockStreakMiss": "Ending now does not count today toward your streak.",
+  "lockStreakAlready": "Today already counts toward your streak.",
+  "insightsFrictionEstimate": "Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.",
+  "insightsEstimatedAttention": "Estimated",
   "sessionUnlockHint": "Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.",
   "sessionScanQrUnlock": "Scan QR (Beta NFC) — Unlock",
   "sessionEmergencyUnlock": "Emergency Unlock (Burn Credits)",

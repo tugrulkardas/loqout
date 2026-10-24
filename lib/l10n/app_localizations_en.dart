@@ -281,8 +281,86 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sessionAppsLocked(int count) {
-    return '$count apps locked';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count apps locked',
+      one: '1 app locked',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String sessionCategoriesLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count categories locked',
+      one: '1 category locked',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionWebsitesLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count websites locked',
+      one: '1 website locked',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockThisSession => 'This session';
+
+  @override
+  String lockFocusTimeToday(int minutes) {
+    return '$minutes min focus time today';
+  }
+
+  @override
+  String lockFocusTimeWeek(int minutes) {
+    return '$minutes min this week';
+  }
+
+  @override
+  String lockStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '1-day streak',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockNoStreak => 'No streak yet';
+
+  @override
+  String get lockInsightEmpty => 'This session starts your record.';
+
+  @override
+  String get lockHoldToUnlock => 'Hold to unlock';
+
+  @override
+  String get lockStreakKeeps => 'Ending now keeps today on your streak.';
+
+  @override
+  String get lockStreakMiss =>
+      'Ending now does not count today toward your streak.';
+
+  @override
+  String get lockStreakAlready => 'Today already counts toward your streak.';
+
+  @override
+  String get insightsFrictionEstimate =>
+      'Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.';
+
+  @override
+  String get insightsEstimatedAttention => 'Estimated';
 
   @override
   String get sessionUnlockHint =>

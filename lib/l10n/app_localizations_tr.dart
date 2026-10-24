@@ -280,8 +280,85 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String sessionAppsLocked(int count) {
-    return '$count uygulama kilitli';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count uygulama kilitli',
+      one: '1 uygulama kilitli',
+    );
+    return '$_temp0';
   }
+
+  @override
+  String sessionCategoriesLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kategori kilitli',
+      one: '1 kategori kilitli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String sessionWebsitesLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count site kilitli',
+      one: '1 site kilitli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockThisSession => 'Bu oturum';
+
+  @override
+  String lockFocusTimeToday(int minutes) {
+    return 'Bugün $minutes dk odak';
+  }
+
+  @override
+  String lockFocusTimeWeek(int minutes) {
+    return 'Bu hafta $minutes dk';
+  }
+
+  @override
+  String lockStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count günlük seri',
+      one: '1 günlük seri',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get lockNoStreak => 'Henüz seri yok';
+
+  @override
+  String get lockInsightEmpty => 'Kaydın bu oturumla başlıyor.';
+
+  @override
+  String get lockHoldToUnlock => 'Açmak için basılı tut';
+
+  @override
+  String get lockStreakKeeps => 'Şimdi bitirmek bugünü seride tutar.';
+
+  @override
+  String get lockStreakMiss => 'Şimdi bitirmek bugünü seriye yazmaz.';
+
+  @override
+  String get lockStreakAlready => 'Bugün zaten seride.';
+
+  @override
+  String get insightsFrictionEstimate =>
+      'Yalnızca tahmin. Engellenen her deneme için yaklaşık 15 dakika. Ölçülmüş ekran süresi değildir.';
+
+  @override
+  String get insightsEstimatedAttention => 'Tahmini';
 
   @override
   String get sessionUnlockHint =>

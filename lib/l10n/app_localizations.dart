@@ -599,8 +599,92 @@ abstract class AppLocalizations {
   /// No description provided for @sessionAppsLocked.
   ///
   /// In en, this message translates to:
-  /// **'{count} apps locked'**
+  /// **'{count, plural, =1{1 app locked} other{{count} apps locked}}'**
   String sessionAppsLocked(int count);
+
+  /// No description provided for @sessionCategoriesLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 category locked} other{{count} categories locked}}'**
+  String sessionCategoriesLocked(int count);
+
+  /// No description provided for @sessionWebsitesLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 website locked} other{{count} websites locked}}'**
+  String sessionWebsitesLocked(int count);
+
+  /// No description provided for @lockThisSession.
+  ///
+  /// In en, this message translates to:
+  /// **'This session'**
+  String get lockThisSession;
+
+  /// No description provided for @lockFocusTimeToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min focus time today'**
+  String lockFocusTimeToday(int minutes);
+
+  /// No description provided for @lockFocusTimeWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes} min this week'**
+  String lockFocusTimeWeek(int minutes);
+
+  /// No description provided for @lockStreakDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1-day streak} other{{count}-day streak}}'**
+  String lockStreakDays(int count);
+
+  /// No description provided for @lockNoStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'No streak yet'**
+  String get lockNoStreak;
+
+  /// No description provided for @lockInsightEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This session starts your record.'**
+  String get lockInsightEmpty;
+
+  /// No description provided for @lockHoldToUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold to unlock'**
+  String get lockHoldToUnlock;
+
+  /// No description provided for @lockStreakKeeps.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending now keeps today on your streak.'**
+  String get lockStreakKeeps;
+
+  /// No description provided for @lockStreakMiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Ending now does not count today toward your streak.'**
+  String get lockStreakMiss;
+
+  /// No description provided for @lockStreakAlready.
+  ///
+  /// In en, this message translates to:
+  /// **'Today already counts toward your streak.'**
+  String get lockStreakAlready;
+
+  /// No description provided for @insightsFrictionEstimate.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.'**
+  String get insightsFrictionEstimate;
+
+  /// No description provided for @insightsEstimatedAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated'**
+  String get insightsEstimatedAttention;
 
   /// No description provided for @sessionUnlockHint.
   ///

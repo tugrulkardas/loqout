@@ -10,6 +10,7 @@ import 'l10n/l10n_ext.dart';
 import 'screens/home_shell.dart';
 import 'services/background_watchdog.dart';
 import 'services/blocklist_service.dart';
+import 'services/focus_stats.dart';
 import 'services/insights_service.dart';
 import 'services/intervention_service.dart';
 import 'services/ios_shield_service.dart';
@@ -19,6 +20,7 @@ import 'services/session_repository.dart';
 import 'theme/tapfocus_theme.dart';
 import 'widgets/beta_qr_auth_button.dart';
 import 'widgets/emergency_override_dialog.dart';
+import 'widgets/hold_to_unlock_button.dart';
 import 'widgets/post_session_mood_prompt.dart';
 
 /// Active focus session surface — no per-session app picker.
@@ -92,9 +94,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
   StreamSubscription<Map<String, dynamic>?>? _violationSub;
   String? _lastViolationPackage;
-  int _interventionCount = 0;
   FocusSessionRecord? _activeRecord;
   DateTime? _sessionStartedAt;
+  Timer? _clock;
+  FocusStats _stats = const FocusStats.empty();
+  String? _insight;
+  int? _shieldedApps;
+  int? _shieldedCategories;
+  int? _shieldedSites;
 
   late List<String> _blockedPackages;
   late List<String> _blockedAppNames;
@@ -116,8 +123,44 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
   @override
   void dispose() {
+    _clock?.cancel();
     _violationSub?.cancel();
     super.dispose();
+  }
+
+  void _startClock() {
+    _clock ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && isSessionActive) setState(() {});
+    });
+  }
+
+  Future<void> _loadLockedContext() async {
+    try {
+      final sessions = await _sessions.loadAll();
+      final stats = FocusStats.fromSessions(sessions);
+      final insights = await InsightsService().load();
+      if (!mounted) return;
+      setState(() {
+        _stats = stats;
+        _insight = _insightLine(insights);
+      });
+    } catch (e, st) {
+      debugPrint('Locked screen stats failed: $e\n$st');
+    }
+  }
+
+  String _insightLine(InsightsSnapshot snapshot) {
+    final l10n = context.l10n;
+    switch (snapshot.moodShiftStory) {
+      case MoodShiftStory.improves:
+        return l10n.insightsMoodImproves;
+      case MoodShiftStory.steadies:
+        return l10n.insightsMoodSteadies;
+      case MoodShiftStory.declines:
+        return l10n.insightsMoodDeclines;
+      case null:
+        return l10n.lockInsightEmpty;
+    }
   }
 
   void _listenForViolations() {
@@ -128,11 +171,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _violationSub = service.on('violation').listen((event) async {
       if (!isSessionActive) return;
       final pkg = event?['package'] as String?;
-      final count = await _sessions.readInterventionCount();
       if (mounted) {
         setState(() {
           if (pkg != null && pkg.isNotEmpty) _lastViolationPackage = pkg;
-          _interventionCount = count;
         });
       }
       await InterventionService.bringToForeground(blockedPackage: pkg);
@@ -226,6 +267,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
           l10n.iosShieldCategories(armed.categoryCount),
         if (armed.webDomainCount > 0) l10n.iosShieldSites(armed.webDomainCount),
       ];
+      _shieldedApps = armed.applicationCount;
+      _shieldedCategories = armed.categoryCount;
+      _shieldedSites = armed.webDomainCount;
       return true;
     } on PlatformException catch (e) {
       if (mounted) {
@@ -260,6 +304,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         _blockedPackages = List<String>.from(record.blockedPackages);
         _blockedAppNames = List<String>.from(record.blockedAppNames);
       }
+      _shieldedApps = record.shieldedApplicationCount;
+      _shieldedCategories = record.shieldedCategoryCount;
+      _shieldedSites = record.shieldedWebDomainCount;
 
       if (IosShieldService.isSupported) {
         await IosShieldService.instance.restoreShield();
@@ -276,15 +323,15 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         }
       }
 
-      final count = await _sessions.readInterventionCount();
       if (!mounted) return;
       setState(() {
         isSessionActive = true;
         _startingSession = false;
         _activeRecord = record;
         _sessionStartedAt = record.startedAt;
-        _interventionCount = count;
       });
+      _startClock();
+      await _loadLockedContext();
     } catch (e) {
       debugPrint('Resume locked session failed: $e');
       if (mounted) setState(() => _startingSession = false);
@@ -383,6 +430,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         blockedAppNames: List<String>.from(_blockedAppNames),
         startedAt: startedAt,
         interventionCount: 0,
+        shieldedApplicationCount: _shieldedApps,
+        shieldedCategoryCount: _shieldedCategories,
+        shieldedWebDomainCount: _shieldedSites,
       );
       await _sessions.resetInterventionCount();
       await _sessions.saveActiveDraft(record);
@@ -391,10 +441,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       setState(() {
         isSessionActive = true;
         _lastViolationPackage = null;
-        _interventionCount = 0;
         _activeRecord = record;
         _sessionStartedAt = startedAt;
       });
+      _startClock();
+      await _loadLockedContext();
     } catch (e) {
       debugPrint('Start focus session failed: $e');
       if (mounted) {
@@ -451,6 +502,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
       record.interventionCount = interventions;
       record.endedAt = endedAt;
+      record.localEndDate = focusLocalDateKey(endedAt);
       record.durationMinutes = durationMinutes;
       record.completionStatus = viaEmergencyOverride
           ? SessionCompletionStatus.earlyExit
@@ -500,181 +552,271 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     await _unlockSession(viaEmergencyOverride: true);
   }
 
+  String _lockedSummary(AppLocalizations l10n) {
+    if (_shieldedApps != null ||
+        _shieldedCategories != null ||
+        _shieldedSites != null) {
+      final parts = <String>[
+        if ((_shieldedApps ?? 0) > 0) l10n.sessionAppsLocked(_shieldedApps!),
+        if ((_shieldedCategories ?? 0) > 0)
+          l10n.sessionCategoriesLocked(_shieldedCategories!),
+        if ((_shieldedSites ?? 0) > 0)
+          l10n.sessionWebsitesLocked(_shieldedSites!),
+      ];
+      if (parts.isEmpty) return l10n.focusNoAppsShielded;
+      return parts.join(' · ');
+    }
+    return l10n.sessionAppsLocked(_blockedPackages.length);
+  }
+
+  int _previewDurationMinutes() {
+    final start = _sessionStartedAt;
+    if (start == null) return 0;
+    final seconds = DateTime.now().difference(start).inSeconds;
+    if (seconds <= 0) return 0;
+    return (seconds / 60).ceil().clamp(1, 24 * 60);
+  }
+
+  String _streakLine(AppLocalizations l10n) {
+    final elapsed = _previewDurationMinutes();
+    final effect = streakEffectOfEnding(
+      elapsedMinutes: elapsed,
+      todayCompletedMinutes: _stats.todayCompletedMinutes,
+      countsAsCompleted: elapsed >= 2,
+    );
+    switch (effect) {
+      case StreakEndEffect.keepsToday:
+        return l10n.lockStreakKeeps;
+      case StreakEndEffect.alreadyCounted:
+        return l10n.lockStreakAlready;
+      case StreakEndEffect.doesNotCountToday:
+        return l10n.lockStreakMiss;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final l10n = context.l10n;
-    final moodEnglish =
-        MoodAxes.getMoodLabel(widget.valence, widget.energy);
+    if (isSessionActive) return _lockedScaffold(c, l10n);
+    return _activatingScaffold(c, l10n);
+  }
+
+  Widget _activatingScaffold(TapFocusColors c, AppLocalizations l10n) {
+    final moodEnglish = MoodAxes.getMoodLabel(widget.valence, widget.energy);
     final moodLabel = localizeMoodLabel(l10n, moodEnglish);
     final uidPreview = widget.nfcUid.length >= 12
         ? widget.nfcUid.substring(0, 12)
         : widget.nfcUid;
-
     return Scaffold(
       backgroundColor: c.voidBlack,
       appBar: AppBar(
-        title: Text(isSessionActive ? l10n.focusTitle : l10n.sessionActivating),
+        title: Text(l10n.sessionActivating),
         backgroundColor: c.voidBlack,
         foregroundColor: c.textPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        automaticallyImplyLeading: !isSessionActive && !_startingSession,
+        automaticallyImplyLeading: !_startingSession,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: c.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: c.surfaceBorder),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.sessionMoodLine(moodLabel, widget.intensity),
+              style: TextStyle(fontSize: 15, color: c.textPrimary),
+            ),
+            Text(
+              l10n.sessionAuthLine(
+                _authChannelLabel(l10n, widget.nfcUid),
+                uidPreview,
+              ),
+              style: TextStyle(fontSize: 15, color: c.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            if (_startingSession) ...[
+              const Center(child: CircularProgressIndicator()),
+              const SizedBox(height: 16),
+              Text(l10n.sessionStartingWatchdog, textAlign: TextAlign.center),
+            ] else ...[
+              Text(
+                l10n.sessionActivateFailed,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: c.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: _startFocusSession,
+                icon: const Icon(Icons.lock),
+                label: Text(l10n.sessionRetryActivate),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: c.accentDeep,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
                 ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _lockedScaffold(TapFocusColors c, AppLocalizations l10n) {
+    final moodEnglish = MoodAxes.getMoodLabel(widget.valence, widget.energy);
+    final moodLabel = localizeMoodLabel(l10n, moodEnglish);
+    final elapsed = _sessionStartedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(_sessionStartedAt!);
+    final streakLabel = _stats.streakDays > 0
+        ? l10n.lockStreakDays(_stats.streakDays)
+        : l10n.lockNoStreak;
+    return Scaffold(
+      backgroundColor: c.voidBlack,
+      appBar: AppBar(
+        title: Text(l10n.focusTitle),
+        backgroundColor: c.voidBlack,
+        foregroundColor: c.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+      ),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 28),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      isSessionActive
-                          ? l10n.sessionLocked
-                          : l10n.sessionActivating,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: c.accent,
-                        fontSize: 16,
-                      ),
+                      formatFocusClock(elapsed),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                    ),
+                    Text(
+                      l10n.lockThisSession,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _insight ?? l10n.lockInsightEmpty,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textPrimary, height: 1.35),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _statChip(c, streakLabel)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _statChip(
+                            c,
+                            l10n.lockFocusTimeToday(_stats.todayFocusMinutes),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
                     Text(
+                      l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textMuted, fontSize: 13),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
                       l10n.sessionMoodLine(moodLabel, widget.intensity),
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: c.textPrimary,
-                      ),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textPrimary),
                     ),
+                    const SizedBox(height: 4),
                     Text(
-                      l10n.sessionAuthLine(
-                        _authChannelLabel(l10n, widget.nfcUid),
-                        uidPreview,
-                      ),
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: c.textSecondary,
-                      ),
+                      _lockedSummary(l10n),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textSecondary),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${l10n.sessionShieldingApps(_blockedPackages.length)}'
-                      '${_blockedAppNames.isNotEmpty ? ': ${_blockedAppNames.take(3).join(', ')}${_blockedAppNames.length > 3 ? '…' : ''}' : ''}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: c.textSecondary,
-                      ),
-                    ),
-                    if (isSessionActive && _lastViolationPackage != null) ...[
-                      const SizedBox(height: 8),
+                    if (_lastViolationPackage != null) ...[
+                      const SizedBox(height: 6),
                       Text(
                         l10n.sessionBlockedAttempt(_lastViolationPackage!),
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 13,
                           color: c.danger,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
+                    const SizedBox(height: 20),
+                    Text(
+                      _streakLine(l10n),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: c.textSecondary, height: 1.3),
+                    ),
+                    const SizedBox(height: 10),
+                    HoldToUnlockButton(
+                      label: l10n.lockHoldToUnlock,
+                      enabled: !_unlocking,
+                      onUnlocked: _unlockSession,
+                    ),
+                    const SizedBox(height: 12),
+                    BetaQrAuthButton(
+                      enabled: !_unlocking,
+                      label: l10n.sessionScanQrUnlock,
+                      filled: false,
+                      onAuthenticated: () => _unlockSession(),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: _unlocking ? null : _onEmergencyUnlockPressed,
+                      icon: Icon(Icons.local_fire_department, color: c.warning),
+                      label: Text(
+                        l10n.sessionEmergencyUnlock,
+                        style: TextStyle(color: c.warning),
+                      ),
+                    ),
+                    if (_unlocking)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
-              if (_startingSession) ...[
-                const Center(child: CircularProgressIndicator()),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.sessionStartingWatchdog,
-                  textAlign: TextAlign.center,
-                ),
-              ] else if (!isSessionActive) ...[
-                Text(
-                  l10n.sessionActivateFailed,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: c.textSecondary),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton.icon(
-                  onPressed: _startFocusSession,
-                  icon: const Icon(Icons.lock),
-                  label: Text(l10n.sessionRetryActivate),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: c.accentDeep,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 15,
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Icon(Icons.lock, size: 64, color: c.textSecondary),
-                const SizedBox(height: 12),
-                Text(
-                  _interventionCount > 0
-                      ? '${l10n.sessionAppsLocked(_blockedPackages.length)}'
-                          ' · $_interventionCount'
-                      : l10n.sessionAppsLocked(_blockedPackages.length),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.sessionUnlockHint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: c.textSecondary),
-                ),
-                const SizedBox(height: 28),
-                BetaQrAuthButton(
-                  enabled: !_unlocking,
-                  label: l10n.sessionScanQrUnlock,
-                  filled: true,
-                  onAuthenticated: () => _unlockSession(),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _unlocking ? null : _onEmergencyUnlockPressed,
-                  icon: const Icon(Icons.local_fire_department),
-                  label: Text(l10n.sessionEmergencyUnlock),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: c.danger.withValues(alpha: 0.18),
-                    foregroundColor: c.warning,
-                    disabledBackgroundColor: c.danger.withValues(alpha: 0.08),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: c.danger.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ),
-                ),
-                if (_unlocking) ...[
-                  const SizedBox(height: 16),
-                  const Center(child: CircularProgressIndicator()),
-                ],
-              ],
-            ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _statChip(TapFocusColors c, String label) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.surfaceBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: c.textPrimary,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
