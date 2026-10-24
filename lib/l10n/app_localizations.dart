@@ -1082,6 +1082,54 @@ abstract class AppLocalizations {
   /// **'Open Settings'**
   String get iosShieldOpenSettings;
 
+  /// No description provided for @iosShieldPasscodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A passcode is required'**
+  String get iosShieldPasscodeTitle;
+
+  /// No description provided for @iosShieldPasscodeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'LoqOut can lock other apps only after this iPhone has a passcode. Apple requires one for Screen Time access. Set it in Settings > Face ID & Passcode, or Touch ID & Passcode, then come back and try again.'**
+  String get iosShieldPasscodeBody;
+
+  /// No description provided for @iosShieldTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get iosShieldTryAgain;
+
+  /// No description provided for @iosShieldRestricted.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Time is restricted on this iPhone, so LoqOut cannot lock apps. A parent or the organization that manages the phone usually sets this.'**
+  String get iosShieldRestricted;
+
+  /// No description provided for @iosShieldNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'LoqOut could not reach Apple to turn on Screen Time access. Check the connection and try again.'**
+  String get iosShieldNetwork;
+
+  /// No description provided for @iosShieldUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'LoqOut could not turn on Screen Time access. Try again in a moment.'**
+  String get iosShieldUnknown;
+
+  /// No description provided for @iosShieldNeedApprovalTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Screen Time access is off'**
+  String get iosShieldNeedApprovalTitle;
+
+  /// No description provided for @iosShieldNeedApprovalBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Screen Time access on the shield screen before locking. An iPhone without a passcode cannot turn this on.'**
+  String get iosShieldNeedApprovalBody;
+
   /// No description provided for @iosShieldSelectOne.
   ///
   /// In en, this message translates to:

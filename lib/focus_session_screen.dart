@@ -229,12 +229,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       return true;
     } on PlatformException catch (e) {
       if (mounted) {
+        final l10n = context.l10n;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.l10n.sessionStartFailed(e.message ?? e.code)),
+            content: Text(iosAuthErrorMessage(l10n, e.code)),
             backgroundColor: Colors.red,
           ),
         );
+        await IosShieldService.instance.noteAuthFailure(e.code);
       }
       return false;
     }

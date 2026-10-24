@@ -1,7 +1,9 @@
 import DeviceActivity
 import FamilyControls
 import Foundation
+import LocalAuthentication
 import ManagedSettings
+import os
 
 /// Shared by the Runner and the Device Activity Monitor extension.
 ///
@@ -43,8 +45,69 @@ enum LoqOutShieldStore {
     }
   }
 
+  /// `available`, `missing`, or `unknown`. Does not prompt and does not call
+  /// Family Controls. A missing passcode makes Screen Time authorization fail.
+  static func devicePasscodeStatus() -> String {
+    let context = LAContext()
+    var error: NSError?
+    if context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) {
+      return "available"
+    }
+    if let error,
+       error.domain == LAError.errorDomain,
+       error.code == LAError.passcodeNotSet.rawValue {
+      return "missing"
+    }
+    return "unknown"
+  }
+
   static func requestAuthorization() async throws {
-    try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+    if devicePasscodeStatus() == "missing" {
+      throw LoqOutShieldError.passcodeRequired
+    }
+    do {
+      try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
+    } catch {
+      throw LoqOutShieldError.classified(authorizationFailureCode(for: error))
+    }
+  }
+
+  /// Stable codes: passcodeRequired, denied, restricted, network, unknown.
+  static func authorizationFailureCode(for error: Error) -> String {
+    let ns = error as NSError
+    let text = [
+      ns.localizedDescription,
+      ns.localizedFailureReason ?? "",
+    ].joined(separator: " ").lowercased()
+    if text.contains("passcode") {
+      return "passcodeRequired"
+    }
+    if text.contains("restrict") {
+      return "restricted"
+    }
+    if ns.domain == NSURLErrorDomain
+      || text.contains("network")
+      || text.contains("internet")
+      || text.contains("offline") {
+      return "network"
+    }
+    if authorizationStatusRaw() == "denied"
+      || text.contains("denied")
+      || text.contains("not authorized") {
+      return "denied"
+    }
+    return "unknown"
+  }
+
+  /// Local counter only. Nothing here is uploaded.
+  static func logAuthFailure(_ code: String) {
+    let allowed = ["passcodeRequired", "denied", "restricted", "network", "unknown", "authorizationRequired"]
+    let stable = allowed.contains(code) ? code : "unknown"
+    let key = "loqout.authFailure.\(stable)"
+    let count = UserDefaults.standard.integer(forKey: key) + 1
+    UserDefaults.standard.set(count, forKey: key)
+    Logger(subsystem: "com.loqout.app", category: "FamilyControls")
+      .error("family_controls_auth_failure code=\(stable, privacy: .public) count=\(count)")
   }
 
   static func save(selection: FamilyActivitySelection) throws {
@@ -78,6 +141,9 @@ enum LoqOutShieldStore {
   /// NFC/QR session start. Applies the shield immediately, then arms the
   /// monitor so the extension keeps it in place while the app is suspended.
   static func beginSession() throws {
+    if devicePasscodeStatus() == "missing" {
+      throw LoqOutShieldError.passcodeRequired
+    }
     guard authorizationStatusRaw() == "approved" else {
       throw LoqOutShieldError.authorizationRequired
     }
@@ -164,15 +230,35 @@ enum LoqOutShieldError: LocalizedError {
   case appGroupUnavailable
   case authorizationRequired
   case emptySelection
+  case passcodeRequired
+  case classified(String)
+
+  /// Code the Flutter UI maps to a sentence. Never the raw Apple text.
+  var failureCode: String {
+    switch self {
+    case .passcodeRequired:
+      return "passcodeRequired"
+    case .authorizationRequired:
+      return "authorizationRequired"
+    case .classified(let code):
+      return code
+    case .appGroupUnavailable, .emptySelection:
+      return "unknown"
+    }
+  }
 
   var errorDescription: String? {
     switch self {
     case .appGroupUnavailable:
       return "App Group \(LoqOutShieldStore.appGroupId) is not available. Enable it on the App ID before signing."
     case .authorizationRequired:
-      return "Family Controls authorization is required before a focus session can lock apps."
+      return "authorizationRequired"
     case .emptySelection:
       return "Choose at least one app, category, or website to shield."
+    case .passcodeRequired:
+      return "passcodeRequired"
+    case .classified(let code):
+      return code
     }
   }
 }

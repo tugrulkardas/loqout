@@ -572,6 +572,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get iosShieldOpenSettings => 'Open Settings';
 
   @override
+  String get iosShieldPasscodeTitle => 'A passcode is required';
+
+  @override
+  String get iosShieldPasscodeBody =>
+      'LoqOut can lock other apps only after this iPhone has a passcode. Apple requires one for Screen Time access. Set it in Settings > Face ID & Passcode, or Touch ID & Passcode, then come back and try again.';
+
+  @override
+  String get iosShieldTryAgain => 'Try again';
+
+  @override
+  String get iosShieldRestricted =>
+      'Screen Time is restricted on this iPhone, so LoqOut cannot lock apps. A parent or the organization that manages the phone usually sets this.';
+
+  @override
+  String get iosShieldNetwork =>
+      'LoqOut could not reach Apple to turn on Screen Time access. Check the connection and try again.';
+
+  @override
+  String get iosShieldUnknown =>
+      'LoqOut could not turn on Screen Time access. Try again in a moment.';
+
+  @override
+  String get iosShieldNeedApprovalTitle => 'Screen Time access is off';
+
+  @override
+  String get iosShieldNeedApprovalBody =>
+      'Allow Screen Time access on the shield screen before locking. An iPhone without a passcode cannot turn this on.';
+
+  @override
   String get iosShieldSelectOne =>
       'Choose at least one app, category, or website to shield.';
 

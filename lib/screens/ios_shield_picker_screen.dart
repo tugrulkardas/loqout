@@ -16,30 +16,83 @@ class IosShieldPickerScreen extends StatefulWidget {
   State<IosShieldPickerScreen> createState() => _IosShieldPickerScreenState();
 }
 
-class _IosShieldPickerScreenState extends State<IosShieldPickerScreen> {
+class _IosShieldPickerScreenState extends State<IosShieldPickerScreen>
+    with WidgetsBindingObserver {
   final IosShieldService _shield = IosShieldService.instance;
   final BlocklistService _blocklist = BlocklistService();
 
   IosShieldSelection _selection = const IosShieldSelection();
+  String _passcode = 'unknown';
+  String? _failureCode;
+  String? _recordedFailure;
   bool _loading = true;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refresh();
+    }
+  }
+
+  IosLockAvailability get _availability => iosLockAvailability(
+        passcode: _passcode,
+        authorizationStatus: _selection.authorizationStatus,
+        failureCode: _failureCode,
+      );
+
+  Future<void> _refresh({bool userInitiated = false}) async {
     try {
+      final passcode = await _shield.devicePasscodeStatus();
+      if (!mounted) return;
+      if (passcode == 'missing') {
+        setState(() {
+          _passcode = passcode;
+          _failureCode = 'passcodeRequired';
+          _selection = const IosShieldSelection();
+        });
+        await _recordFailure(userInitiated: userInitiated);
+        return;
+      }
       final selection = await _shield.summary();
       if (!mounted) return;
-      setState(() => _selection = selection);
+      setState(() {
+        _passcode = passcode;
+        _selection = selection;
+        _failureCode = selection.authorizationStatus == 'denied' ? 'denied' : null;
+      });
+      await _recordFailure(userInitiated: userInitiated);
     } on PlatformException catch (e) {
-      _showError(e.message ?? e.code);
+      if (!mounted) return;
+      setState(() => _failureCode = e.code);
+      await _recordFailure(userInitiated: true);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _recordFailure({required bool userInitiated}) async {
+    final code = iosLockFailureCode(_availability);
+    if (code == null) {
+      _recordedFailure = null;
+      return;
+    }
+    if (!userInitiated && _recordedFailure == code) return;
+    _recordedFailure = code;
+    await _shield.noteAuthFailure(code);
   }
 
   Future<void> _authorize() async {
@@ -48,9 +101,18 @@ class _IosShieldPickerScreenState extends State<IosShieldPickerScreen> {
     try {
       final selection = await _shield.requestAuthorization();
       if (!mounted) return;
-      setState(() => _selection = selection);
+      setState(() {
+        _selection = selection;
+        _failureCode = selection.isApproved
+            ? null
+            : (selection.authorizationStatus == 'denied' ? 'denied' : null);
+        _passcode = 'available';
+      });
+      await _recordFailure(userInitiated: true);
     } on PlatformException catch (e) {
-      _showError(e.message ?? e.code);
+      if (!mounted) return;
+      setState(() => _failureCode = e.code);
+      await _recordFailure(userInitiated: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -89,24 +151,21 @@ class _IosShieldPickerScreenState extends State<IosShieldPickerScreen> {
       );
       Navigator.of(context).pop(true);
     } on PlatformException catch (e) {
-      _showError(e.message ?? e.code);
+      if (!mounted) return;
+      setState(() => _failureCode = e.code);
+      await _recordFailure(userInitiated: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final l10n = context.l10n;
-    final denied = _selection.authorizationStatus == 'denied';
+    final availability = _availability;
+    final blocked = availability != IosLockAvailability.ready &&
+        availability != IosLockAvailability.needsAuthorization;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.iosShieldTitle)),
       body: _loading
@@ -119,53 +178,71 @@ class _IosShieldPickerScreenState extends State<IosShieldPickerScreen> {
                   style: TextStyle(color: c.textSecondary, height: 1.35),
                 ),
                 const SizedBox(height: 20),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: c.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: c.accent.withValues(alpha: 0.35)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      _selection.hasTargets
-                          ? l10n.iosShieldSummary(
-                              _selection.applicationCount,
-                              _selection.categoryCount,
-                              _selection.webDomainCount,
-                            )
-                          : l10n.focusNoAppsShielded,
-                      style: TextStyle(
-                        color: c.textPrimary,
-                        fontWeight: FontWeight.w700,
+                if (availability == IosLockAvailability.ready &&
+                    _selection.hasTargets)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: c.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: c.accent.withValues(alpha: 0.35)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        l10n.iosShieldSummary(
+                          _selection.applicationCount,
+                          _selection.categoryCount,
+                          _selection.webDomainCount,
+                        ),
+                        style: TextStyle(
+                          color: c.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                if (!_selection.isApproved) ...[
+                if (blocked) ...[
+                  Text(
+                    availability == IosLockAvailability.passcodeRequired
+                        ? l10n.iosShieldPasscodeTitle
+                        : l10n.iosShieldNeedApprovalTitle,
+                    style: TextStyle(
+                      color: c.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    iosLockMessage(l10n, availability),
+                    style: TextStyle(color: c.warning, height: 1.35),
+                  ),
+                  const SizedBox(height: 16),
+                  if (availability == IosLockAvailability.passcodeRequired ||
+                      availability == IosLockAvailability.denied)
+                    OutlinedButton(
+                      onPressed: openAppSettings,
+                      child: Text(l10n.iosShieldOpenSettings),
+                    ),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: _busy ? null : () => _refresh(userInitiated: true),
+                    child: Text(l10n.iosShieldTryAgain),
+                  ),
+                ],
+                if (availability == IosLockAvailability.needsAuthorization) ...[
                   FilledButton(
                     onPressed: _busy ? null : _authorize,
                     child: Text(l10n.iosShieldAuthorize),
                   ),
-                  const SizedBox(height: 12),
                 ],
-                if (denied) ...[
-                  Text(
-                    l10n.iosShieldDenied,
-                    style: TextStyle(color: c.warning, height: 1.35),
+                if (availability == IosLockAvailability.ready) ...[
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy ? null : _pick,
+                    child: Text(l10n.iosShieldOpenPicker),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: openAppSettings,
-                    child: Text(l10n.iosShieldOpenSettings),
-                  ),
-                  const SizedBox(height: 12),
                 ],
-                FilledButton(
-                  onPressed: _busy || !_selection.isApproved ? null : _pick,
-                  child: Text(l10n.iosShieldOpenPicker),
-                ),
               ],
             ),
     );

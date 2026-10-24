@@ -34,4 +34,54 @@ void main() {
     expect(selection.cancelled, isTrue);
     expect(selection.hasTargets, isTrue);
   });
+
+  test('a missing passcode is not shown as Screen Time approved', () {
+    expect(
+      iosLockAvailability(
+        passcode: 'missing',
+        authorizationStatus: 'approved',
+        failureCode: null,
+      ),
+      IosLockAvailability.passcodeRequired,
+    );
+    expect(
+      iosLockFailureCode(IosLockAvailability.passcodeRequired),
+      'passcodeRequired',
+    );
+  });
+
+  test('denied, restricted, and network stay distinct from granted', () {
+    expect(
+      iosLockAvailability(
+        passcode: 'available',
+        authorizationStatus: 'notDetermined',
+        failureCode: 'restricted',
+      ),
+      IosLockAvailability.restricted,
+    );
+    expect(
+      iosLockAvailability(
+        passcode: 'available',
+        authorizationStatus: 'denied',
+        failureCode: null,
+      ),
+      IosLockAvailability.denied,
+    );
+    expect(
+      iosLockAvailability(
+        passcode: 'available',
+        authorizationStatus: 'notDetermined',
+        failureCode: 'network',
+      ),
+      IosLockAvailability.network,
+    );
+    expect(
+      iosLockAvailability(
+        passcode: 'available',
+        authorizationStatus: 'approved',
+        failureCode: null,
+      ),
+      IosLockAvailability.ready,
+    );
+  });
 }

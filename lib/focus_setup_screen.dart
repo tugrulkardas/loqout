@@ -61,13 +61,25 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
   Future<void> _reloadBlocklist({bool refreshIosShield = false}) async {
     final loaded = await _blocklistService.load();
     var iosShield = _iosShield;
-    // AuthorizationCenter aborts the process when the distribution profile
-    // lacks Family Controls. Do not touch it during cold start.
-    if (refreshIosShield && IosShieldService.isSupported) {
-      try {
-        iosShield = await IosShieldService.instance.summary();
-      } catch (e, st) {
-        debugPrint('Family Controls summary failed: $e\n$st');
+    if (IosShieldService.isSupported) {
+      if (refreshIosShield) {
+        // User asked to lock or returned from the shield screen.
+        // A missing Family Controls entitlement can still abort here.
+        try {
+          iosShield = await IosShieldService.instance.summary();
+        } catch (e, st) {
+          debugPrint('Family Controls summary failed: $e\n$st');
+          iosShield = const IosShieldSelection();
+        }
+      } else {
+        final passcode =
+            await IosShieldService.instance.devicePasscodeStatus();
+        final cached =
+            await IosShieldService.instance.cachedAuthorizationStatus();
+        iosShield = IosShieldSelection(
+          authorizationStatus:
+              passcode == 'missing' ? 'notDetermined' : cached,
+        );
       }
     }
     if (!mounted) return;
@@ -152,21 +164,30 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
   }
 
   bool get _shieldReady => IosShieldService.isSupported
-      ? (_iosShield.hasTargets || _blocklist.isNotEmpty)
+      ? (_iosShield.isApproved &&
+          (_iosShield.hasTargets || _blocklist.isNotEmpty))
       : _blocklist.isNotEmpty;
 
   /// First-time / empty blocklist gate — configure once before kick-off.
   Future<bool> _ensureBlocklistConfigured() async {
-    await _reloadBlocklist();
+    await _reloadBlocklist(refreshIosShield: IosShieldService.isSupported);
     if (_shieldReady) return true;
 
     if (!mounted) return false;
     final l10n = context.l10n;
+    final needsApproval =
+        IosShieldService.isSupported && !_iosShield.isApproved;
     final goEdit = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.focusEditBlocklist),
-        content: Text(l10n.focusConfigureBlocklist),
+        title: Text(
+          needsApproval ? l10n.iosShieldNeedApprovalTitle : l10n.focusEditBlocklist,
+        ),
+        content: Text(
+          needsApproval
+              ? l10n.iosShieldNeedApprovalBody
+              : l10n.focusConfigureBlocklist,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -202,7 +223,9 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
     if (!ready) {
       if (mounted) {
         setState(() {
-          _scanStatus = context.l10n.focusConfigureBlocklist;
+          _scanStatus = IosShieldService.isSupported && !_iosShield.isApproved
+              ? context.l10n.iosShieldNeedApprovalBody
+              : context.l10n.focusConfigureBlocklist;
         });
       }
       return;
@@ -322,7 +345,11 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
     final c = context.colors;
     final l10n = context.l10n;
     final empty = !_shieldReady;
-    final title = IosShieldService.isSupported && _iosShield.hasTargets
+    final needsApproval =
+        IosShieldService.isSupported && !_iosShield.isApproved;
+    final title = IosShieldService.isSupported &&
+            _iosShield.isApproved &&
+            _iosShield.hasTargets
         ? l10n.iosShieldSummary(
             _iosShield.applicationCount,
             _iosShield.categoryCount,
@@ -331,11 +358,13 @@ class _FocusSetupScreenState extends State<FocusSetupScreen> {
         : (empty
             ? l10n.focusNoAppsShielded
             : l10n.focusShieldCount(_blocklist.length));
-    final subtitle = empty
-        ? l10n.focusConfigureBlocklist
-        : (IosShieldService.isSupported
-            ? l10n.iosShieldOpenPicker
-            : _blocklist.summaryLabels());
+    final subtitle = needsApproval
+        ? l10n.iosShieldNeedApprovalTitle
+        : (empty
+            ? l10n.focusConfigureBlocklist
+            : (IosShieldService.isSupported
+                ? l10n.iosShieldOpenPicker
+                : _blocklist.summaryLabels()));
     return Material(
       color: c.surface,
       borderRadius: BorderRadius.circular(14),

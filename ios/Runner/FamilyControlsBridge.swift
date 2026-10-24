@@ -28,13 +28,19 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       result(LoqOutShieldStore.authorizationStatusRaw())
     case "selectionSummary":
       result(LoqOutShieldStore.summaryMap())
+    case "devicePasscodeStatus":
+      result(LoqOutShieldStore.devicePasscodeStatus())
+    case "noteAuthFailure":
+      let code = call.arguments as? String ?? "unknown"
+      LoqOutShieldStore.logAuthFailure(code)
+      result(nil)
     case "requestAuthorization":
       Task { @MainActor in
         do {
           try await LoqOutShieldStore.requestAuthorization()
           result(LoqOutShieldStore.summaryMap())
         } catch {
-          result(self.failure("authorizationFailed", error))
+          result(self.authFailure(error))
         }
       }
     case "presentActivityPicker":
@@ -46,7 +52,7 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
         try LoqOutShieldStore.beginSession()
         result(LoqOutShieldStore.summaryMap())
       } catch {
-        result(failure("startShieldFailed", error))
+        result(authFailure(error))
       }
     case "stopShield":
       LoqOutShieldStore.endSession()
@@ -131,6 +137,12 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
 
   private func failure(_ code: String, _ error: Error) -> FlutterError {
     FlutterError(code: code, message: error.localizedDescription, details: nil)
+  }
+
+  /// Stable code only. The raw Family Controls sentence stays out of the UI.
+  private func authFailure(_ error: Error) -> FlutterError {
+    let code = (error as? LoqOutShieldError)?.failureCode ?? "unknown"
+    return FlutterError(code: code, message: code, details: nil)
   }
 
   @MainActor

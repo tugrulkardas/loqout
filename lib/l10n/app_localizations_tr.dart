@@ -567,6 +567,35 @@ class AppLocalizationsTr extends AppLocalizations {
   String get iosShieldOpenSettings => 'Ayarları aç';
 
   @override
+  String get iosShieldPasscodeTitle => 'Parola gerekli';
+
+  @override
+  String get iosShieldPasscodeBody =>
+      'LoqOut diğer uygulamaları yalnızca bu iPhone’da bir parola varken kilitleyebilir. Apple, Ekran Süresi için bunu şart koşar. Ayarlar > Face ID ve Parola ya da Touch ID ve Parola bölümünden parola oluşturun, sonra buraya dönüp yeniden deneyin.';
+
+  @override
+  String get iosShieldTryAgain => 'Yeniden dene';
+
+  @override
+  String get iosShieldRestricted =>
+      'Bu iPhone’da Ekran Süresi kısıtlı. LoqOut uygulamaları kilitleyemez. Bunu genellikle bir ebeveyn veya cihazı yöneten kuruluş ayarlar.';
+
+  @override
+  String get iosShieldNetwork =>
+      'Ekran Süresi izni için Apple’a ulaşılamadı. Bağlantıyı kontrol edip yeniden deneyin.';
+
+  @override
+  String get iosShieldUnknown =>
+      'Ekran Süresi izni açılamadı. Biraz sonra yeniden deneyin.';
+
+  @override
+  String get iosShieldNeedApprovalTitle => 'Ekran Süresi kapalı';
+
+  @override
+  String get iosShieldNeedApprovalBody =>
+      'Kilitlemeden önce kalkan ekranından Ekran Süresi iznini verin. Parolası olmayan bir iPhone’da bu izin açılmaz.';
+
+  @override
   String get iosShieldSelectOne =>
       'Kalkan için en az bir uygulama, kategori veya site seçin.';
 
