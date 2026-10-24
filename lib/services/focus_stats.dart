@@ -6,6 +6,11 @@ import '../models/session_telemetry.dart';
 /// One constant so the rule can be changed in a single place.
 const int kStreakMinimumFocusMinutes = 10;
 
+/// Assumed waking day. LoqOut does not store a sleep schedule, so the
+/// focus-share line uses this instead of a personal wake time.
+/// 16 hours. Not screen time and not phone time.
+const int kWakingMinutesPerDay = 16 * 60;
+
 /// Calendar date of [instant] in the device timezone, `yyyy-MM-dd`.
 ///
 /// A session that crosses midnight is attributed to the day it ends, not the
@@ -48,6 +53,9 @@ class FocusStats {
     required this.weekFocusMinutes,
     required this.streakDays,
     required this.todayCompletedMinutes,
+    required this.weekCompletedMinutes,
+    required this.allTimeFocusMinutes,
+    required this.todayAttemptCount,
     required this.weekCompleted,
   });
 
@@ -56,6 +64,9 @@ class FocusStats {
         weekFocusMinutes = 0,
         streakDays = 0,
         todayCompletedMinutes = 0,
+        weekCompletedMinutes = 0,
+        allTimeFocusMinutes = 0,
+        todayAttemptCount = 0,
         weekCompleted = const [false, false, false, false, false, false, false];
 
   /// All saved focus minutes whose end date is today, including short sessions.
@@ -63,6 +74,17 @@ class FocusStats {
 
   /// Completed minutes today. This is what the streak rule uses.
   final int todayCompletedMinutes;
+
+  /// Completed minutes whose end date is in the last 7 local days.
+  /// The weekly focus-share line uses this, not [weekFocusMinutes].
+  final int weekCompletedMinutes;
+
+  /// Every saved focus minute on the device, including short sessions.
+  final int allTimeFocusMinutes;
+
+  /// Blocked-app attempts already stored on sessions that ended today.
+  /// Android writes these. iOS sessions stay at 0 because attempts are not measured.
+  final int todayAttemptCount;
 
   /// Saved focus minutes ending in the last 7 local days, including today.
   final int weekFocusMinutes;
@@ -98,17 +120,24 @@ class FocusStats {
     final completedByDay = <String, int>{};
     var todayFocus = 0;
     var weekFocus = 0;
+    var weekCompleted = 0;
+    var allTime = 0;
+    var todayAttempts = 0;
 
     for (final session in sessions) {
       final key = sessionEndDateKey(session);
       final minutes = session.durationMinutes ?? 0;
-      if (key == null || minutes <= 0) continue;
+      if (key == today) todayAttempts += session.interventionCount;
+      if (minutes <= 0) continue;
+      allTime += minutes;
+      if (key == null) continue;
       if (key == today) todayFocus += minutes;
       if (weekKeys.contains(key)) weekFocus += minutes;
       if (session.completionStatus != SessionCompletionStatus.completed) {
         continue;
       }
       completedByDay[key] = (completedByDay[key] ?? 0) + minutes;
+      if (weekKeys.contains(key)) weekCompleted += minutes;
     }
 
     return FocusStats(
@@ -116,6 +145,9 @@ class FocusStats {
       weekFocusMinutes: weekFocus,
       streakDays: _streakEndingAt(today, completedByDay),
       todayCompletedMinutes: completedByDay[today] ?? 0,
+      weekCompletedMinutes: weekCompleted,
+      allTimeFocusMinutes: allTime,
+      todayAttemptCount: todayAttempts,
       weekCompleted: _calendarWeekCompleted(now ?? DateTime.now(), completedByDay),
     );
   }
@@ -148,8 +180,25 @@ class StreakRingState {
   final bool reached;
 }
 
+/// Percent of waking time spent in LoqOut focus, rounded and capped at 100.
+///
+/// [focusMinutes] is completed focus in the window, plus the open session
+/// only after that session has reached 2 minutes. [wakingMinutes] is
+/// [kWakingMinutesPerDay] for today, or seven times that for the week.
+/// This is focus time inside LoqOut. It is not screen time or phone time.
+int focusSharePercent({
+  required int focusMinutes,
+  required int wakingMinutes,
+}) {
+  if (wakingMinutes <= 0 || focusMinutes <= 0) return 0;
+  final percent = ((focusMinutes * 100) / wakingMinutes).round();
+  if (percent < 0) return 0;
+  if (percent > 100) return 100;
+  return percent;
+}
+
 /// [elapsedMinutes] is wall-clock time in the open session. Past the
-/// threshold the ring stays full instead of wrapping.
+/// threshold the fraction stays at 1 instead of wrapping.
 StreakRingState streakRingState({
   required int todayCompletedMinutes,
   required double elapsedMinutes,

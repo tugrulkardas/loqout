@@ -22,7 +22,6 @@ import 'widgets/beta_qr_auth_button.dart';
 import 'widgets/emergency_override_dialog.dart';
 import 'widgets/focus_week_strip.dart';
 import 'widgets/hold_to_unlock_button.dart';
-import 'widgets/streak_progress_ring.dart';
 import 'widgets/post_session_mood_prompt.dart';
 
 /// Active focus session surface — no per-session app picker.
@@ -100,8 +99,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   DateTime? _sessionStartedAt;
   Timer? _clock;
   FocusStats _stats = const FocusStats.empty();
+  InsightsSnapshot? _insights;
+  int _liveAttempts = 0;
   Map<String, Uint8List> _lockedIcons = const {};
-  String? _insight;
   int? _shieldedApps;
   int? _shieldedCategories;
   int? _shieldedSites;
@@ -142,10 +142,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       final sessions = await _sessions.loadAll();
       final stats = FocusStats.fromSessions(sessions);
       final insights = await InsightsService().load();
+      final liveAttempts = useDesktopMockLauncherApps
+          ? 0
+          : await _sessions.readInterventionCount();
       if (!mounted) return;
       setState(() {
         _stats = stats;
-        _insight = _insightLine(insights);
+        _insights = insights;
+        _liveAttempts = liveAttempts;
       });
     } catch (e, st) {
       debugPrint('Locked screen stats failed: $e\n$st');
@@ -170,17 +174,48 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     }
   }
 
-  String _insightLine(InsightsSnapshot snapshot) {
-    final l10n = context.l10n;
-    switch (snapshot.moodShiftStory) {
-      case MoodShiftStory.improves:
-        return l10n.insightsMoodImproves;
-      case MoodShiftStory.steadies:
-        return l10n.insightsMoodSteadies;
-      case MoodShiftStory.declines:
-        return l10n.insightsMoodDeclines;
-      case null:
-        return l10n.lockInsightEmpty;
+  String _insightLine(AppLocalizations l10n) {
+    final snapshot = _insights;
+    final lines = <String>[];
+    if (snapshot != null) {
+      if (!useDesktopMockLauncherApps && snapshot.interventionsLast7Days > 0) {
+        lines.add(
+          l10n.lockInsightFriction(
+            snapshot.interventionsLast7Days,
+            snapshot.savedAttentionMinutes,
+          ),
+        );
+      }
+      final story = snapshot.moodShiftStory;
+      if (story != null) {
+        lines.add(switch (story) {
+          MoodShiftStory.improves => l10n.insightsMoodImproves,
+          MoodShiftStory.steadies => l10n.insightsMoodSteadies,
+          MoodShiftStory.declines => l10n.insightsMoodDeclines,
+        });
+      }
+      final peak = snapshot.peakFocusDaypart;
+      if (peak != null) lines.add(_peakAdvice(l10n, peak));
+    }
+    if (lines.isEmpty) {
+      return _stats.isFreshRecord
+          ? l10n.lockInsightEmpty
+          : l10n.insightsNotEnoughData;
+    }
+    final index = DateTime.now().second ~/ 8 % lines.length;
+    return lines[index];
+  }
+
+  String _peakAdvice(AppLocalizations l10n, FocusDaypart daypart) {
+    switch (daypart) {
+      case FocusDaypart.morning:
+        return l10n.insightsPeakMorning;
+      case FocusDaypart.afternoon:
+        return l10n.insightsPeakAfternoon;
+      case FocusDaypart.evening:
+        return l10n.insightsPeakEvening;
+      case FocusDaypart.night:
+        return l10n.insightsPeakNight;
     }
   }
 
@@ -192,9 +227,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     _violationSub = service.on('violation').listen((event) async {
       if (!isSessionActive) return;
       final pkg = event?['package'] as String?;
+      final count = await _sessions.readInterventionCount();
       if (mounted) {
         setState(() {
           if (pkg != null && pkg.isNotEmpty) _lastViolationPackage = pkg;
+          _liveAttempts = count;
         });
       }
       await InterventionService.bringToForeground(blockedPackage: pkg);
@@ -694,19 +731,45 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     );
   }
 
+  String _amount(AppLocalizations l10n, int minutes) {
+    if (minutes < 60) return l10n.lockMinutesShort(minutes);
+    final hours = minutes / 60;
+    final shown = hours < 10
+        ? hours.toStringAsFixed(1)
+        : hours.round().toString();
+    return l10n.lockHoursShort(shown);
+  }
+
   Widget _lockedScaffold(TapFocusColors c, AppLocalizations l10n) {
     final theme = Theme.of(context);
-    final moodEnglish = MoodAxes.getMoodLabel(widget.valence, widget.energy);
-    final moodLabel = localizeMoodLabel(l10n, moodEnglish);
     final elapsed = _sessionStartedAt == null
         ? Duration.zero
         : DateTime.now().difference(_sessionStartedAt!);
+    final liveWhole = elapsed.isNegative ? 0 : elapsed.inMinutes;
+    final preview = _previewDurationMinutes();
+    final shareLive = preview >= 2 ? preview : 0;
+    final todayMinutes = _stats.todayFocusMinutes + liveWhole;
+    final weekMinutes = _stats.weekFocusMinutes + liveWhole;
+    final allMinutes = _stats.allTimeFocusMinutes + liveWhole;
+    final fresh = todayMinutes == 0 && weekMinutes == 0 && allMinutes == 0;
+    final todayShareMinutes = _stats.todayCompletedMinutes + shareLive;
+    final weekShareMinutes = _stats.weekCompletedMinutes + shareLive;
+    final todayShare = focusSharePercent(
+      focusMinutes: todayShareMinutes,
+      wakingMinutes: kWakingMinutesPerDay,
+    );
+    final weekShare = focusSharePercent(
+      focusMinutes: weekShareMinutes,
+      wakingMinutes: kWakingMinutesPerDay * 7,
+    );
     final ring = _ringState();
-    final caption = ring.reached
+    final streakCaption = ring.reached
         ? l10n.lockTodayOnStreak
         : l10n.lockMinutesToStreak(ring.minutesRemaining);
     final atRisk = _streakEffect() == StreakEndEffect.doesNotCountToday &&
         _stats.streakDays > 0;
+    final showAttempts = !useDesktopMockLauncherApps &&
+        (_stats.todayAttemptCount + _liveAttempts > 0);
     return Scaffold(
       backgroundColor: c.voidBlack,
       appBar: AppBar(
@@ -721,67 +784,171 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final short = constraints.maxHeight < 560;
             return SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(24, short ? 4 : 8, 24, 8),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    StreakProgressRing(
-                      progress: ring.fraction,
-                      timeLabel: formatFocusClock(elapsed),
-                      caption: caption,
-                      semanticsLabel: '${l10n.lockThisSession}. '
-                          '${formatFocusClock(elapsed)}. $caption',
-                      diameter: short ? 132 : 164,
-                      reached: ring.reached,
+                    Semantics(
+                      label: '${l10n.lockThisSession}. ${formatFocusClock(elapsed)}',
+                      child: ExcludeSemantics(
+                        child: Text(
+                          formatFocusClock(elapsed),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
                     ),
-                    _weekReadout(c, l10n, theme),
-                    _moodCard(c, l10n, theme, moodLabel),
-                    _lockedTargets(c, l10n, theme),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _streakNotice(c, l10n, theme, atRisk),
-                        const SizedBox(height: 8),
-                        HoldToUnlockButton(
-                          label: l10n.lockHoldToUnlock,
-                          semanticsHint: l10n.lockHoldSemanticsHint,
-                          accessibleLabel: l10n.lockUnlockAction,
-                          enabled: !_unlocking,
-                          onUnlocked: _unlockSession,
+                    Text(
+                      l10n.lockThisSession,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: c.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (fresh)
+                      Text(
+                        l10n.lockStartToday,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: c.textPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
-                        BetaQrAuthButton(
-                          enabled: !_unlocking,
-                          label: l10n.sessionScanQrUnlock,
-                          quiet: true,
-                          onAuthenticated: () => _unlockSession(),
+                      )
+                    else
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 14,
+                        runSpacing: 2,
+                        children: [
+                          Text(
+                            l10n.lockCumulativeToday(_amount(l10n, todayMinutes)),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: c.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            l10n.lockCumulativeWeek(_amount(l10n, weekMinutes)),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: c.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            l10n.lockCumulativeAllTime(_amount(l10n, allMinutes)),
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: c.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 16),
+                    _streakBlock(c, l10n, theme, streakCaption, ring.fraction),
+                    if (todayShareMinutes > 0 || weekShareMinutes > 0) ...[
+                      const SizedBox(height: 8),
+                      if (todayShareMinutes > 0)
+                        Text(
+                          todayShare == 0
+                              ? l10n.lockDayFocusShareUnder
+                              : l10n.lockDayFocusShare(todayShare),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: c.textSecondary,
+                          ),
                         ),
-                        TextButton.icon(
-                          onPressed:
-                              _unlocking ? null : _onEmergencyUnlockPressed,
-                          icon: Icon(
-                            Icons.local_fire_department_outlined,
-                            size: 18,
+                      if (weekShareMinutes > 0)
+                        Text(
+                          weekShare == 0
+                              ? l10n.lockWeekFocusShareUnder
+                              : l10n.lockWeekFocusShare(weekShare),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: c.textSecondary,
+                          ),
+                        ),
+                      Text(
+                        l10n.lockFocusShareNote,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: c.textMuted,
+                        ),
+                      ),
+                    ],
+                    if (showAttempts) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.lockAttemptsToday(
+                          _stats.todayAttemptCount + _liveAttempts,
+                        ),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: c.textPrimary,
+                        ),
+                      ),
+                      if (_liveAttempts > 0)
+                        Text(
+                          l10n.lockAttemptsSession(_liveAttempts),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodySmall?.copyWith(
                             color: c.textMuted,
                           ),
-                          label: Text(l10n.sessionEmergencyUnlock),
-                          style: TextButton.styleFrom(
-                            foregroundColor: c.textSecondary,
-                            visualDensity: VisualDensity.compact,
-                            textStyle: theme.textTheme.bodyMedium,
-                          ),
                         ),
-                        if (_unlocking)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 4),
-                            child: Center(child: CircularProgressIndicator()),
-                          ),
-                      ],
+                    ],
+                    const SizedBox(height: 10),
+                    Text(
+                      _insightLine(l10n),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: c.textSecondary,
+                        height: 1.3,
+                      ),
                     ),
+                    const SizedBox(height: 8),
+                    _moodLine(c, l10n, theme),
+                    _lockedTargets(c, l10n, theme),
+                    const SizedBox(height: 12),
+                    _streakNotice(c, l10n, theme, atRisk),
+                    const SizedBox(height: 8),
+                    HoldToUnlockButton(
+                      label: l10n.lockHoldToUnlock,
+                      semanticsHint: l10n.lockHoldSemanticsHint,
+                      accessibleLabel: l10n.lockUnlockAction,
+                      enabled: !_unlocking,
+                      onUnlocked: _unlockSession,
+                    ),
+                    BetaQrAuthButton(
+                      enabled: !_unlocking,
+                      label: l10n.sessionScanQrUnlock,
+                      quiet: true,
+                      onAuthenticated: () => _unlockSession(),
+                    ),
+                    TextButton.icon(
+                      onPressed: _unlocking ? null : _onEmergencyUnlockPressed,
+                      icon: Icon(
+                        Icons.local_fire_department_outlined,
+                        size: 18,
+                        color: c.textMuted,
+                      ),
+                      label: Text(l10n.sessionEmergencyUnlock),
+                      style: TextButton.styleFrom(
+                        foregroundColor: c.textSecondary,
+                        visualDensity: VisualDensity.compact,
+                        textStyle: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    if (_unlocking)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
                   ],
                 ),
               ),
@@ -792,24 +959,37 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     );
   }
 
-  StreakEndEffect _streakEffect() {
-    final elapsed = _previewDurationMinutes();
-    return streakEffectOfEnding(
-      elapsedMinutes: elapsed,
-      todayCompletedMinutes: _stats.todayCompletedMinutes,
-      countsAsCompleted: elapsed >= 2,
-    );
-  }
-
-  Widget _weekReadout(TapFocusColors c, AppLocalizations l10n, ThemeData theme) {
-    final fresh = _stats.isFreshRecord;
+  Widget _streakBlock(
+    TapFocusColors c,
+    AppLocalizations l10n,
+    ThemeData theme,
+    String caption,
+    double fraction,
+  ) {
     final todayIndex = DateTime.now().weekday - DateTime.monday;
-    final column = Column(
+    return Column(
       children: [
+        if (_stats.streakDays > 0)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.local_fire_department, color: c.accent, size: 28),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  l10n.lockStreakDays(_stats.streakDays),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 8),
         Semantics(
-          label: fresh
-              ? l10n.lockStartToday
-              : l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
+          label: l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
           child: ExcludeSemantics(
             child: FocusWeekStrip(
               completed: _stats.weekCompleted,
@@ -818,89 +998,55 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        if (fresh)
-          ExcludeSemantics(
-            child: Text(
-              l10n.lockStartToday,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: c.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
+        Semantics(
+          label: caption,
+          child: ExcludeSemantics(
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 96,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: fraction.clamp(0.0, 1.0),
+                      minHeight: 3,
+                      backgroundColor: c.textMuted.withValues(alpha: 0.25),
+                      color: c.accent,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  caption,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: c.textMuted,
+                  ),
+                ),
+              ],
             ),
-          )
-        else ...[
-          if (_stats.streakDays > 0)
-            Text(
-              l10n.lockStreakDays(_stats.streakDays),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: c.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          Text(
-            l10n.lockFocusTimeToday(_stats.todayFocusMinutes),
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(color: c.textSecondary),
           ),
-        ],
+        ),
       ],
     );
-    return column;
   }
 
-  Widget _moodCard(
-    TapFocusColors c,
-    AppLocalizations l10n,
-    ThemeData theme,
-    String moodLabel,
-  ) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: c.cardShadow,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Icon(
-                Icons.circle,
-                size: 10,
-                color: widget.startQuadrant.color,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.sessionMoodLine(moodLabel, widget.intensity),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: c.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _insight ?? l10n.lockInsightEmpty,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: c.textSecondary,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget _moodLine(TapFocusColors c, AppLocalizations l10n, ThemeData theme) {
+    final moodEnglish = MoodAxes.getMoodLabel(widget.valence, widget.energy);
+    final moodLabel = localizeMoodLabel(l10n, moodEnglish);
+    return Text(
+      l10n.sessionMoodLine(moodLabel, widget.intensity),
+      textAlign: TextAlign.center,
+      style: theme.textTheme.bodyMedium?.copyWith(color: c.textPrimary),
+    );
+  }
+
+  StreakEndEffect _streakEffect() {
+    final elapsed = _previewDurationMinutes();
+    return streakEffectOfEnding(
+      elapsedMinutes: elapsed,
+      todayCompletedMinutes: _stats.todayCompletedMinutes,
+      countsAsCompleted: elapsed >= 2,
     );
   }
 

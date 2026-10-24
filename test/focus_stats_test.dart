@@ -132,6 +132,51 @@ void main() {
     expect(stats.isFreshRecord, isFalse);
   });
 
+  test('focus share is capped waking time inside LoqOut', () {
+    expect(kWakingMinutesPerDay, 16 * 60);
+    expect(
+      focusSharePercent(focusMinutes: 96, wakingMinutes: kWakingMinutesPerDay),
+      10,
+    );
+    expect(
+      focusSharePercent(focusMinutes: 1, wakingMinutes: kWakingMinutesPerDay),
+      0,
+    );
+    expect(
+      focusSharePercent(
+        focusMinutes: 20 * 60,
+        wakingMinutes: kWakingMinutesPerDay,
+      ),
+      100,
+    );
+    expect(
+      focusSharePercent(
+        focusMinutes: 96,
+        wakingMinutes: kWakingMinutesPerDay * 7,
+      ),
+      1,
+    );
+  });
+
+  test('all-time focus keeps short sessions and today counts stored attempts', () {
+    final stats = FocusStats.fromSessions(
+      [
+        _ended(id: 'done', localEndDate: '2026-10-24', minutes: 20),
+        _ended(
+          id: 'bail',
+          localEndDate: '2026-10-20',
+          minutes: 4,
+          status: SessionCompletionStatus.earlyExit,
+        ),
+      ],
+      now: now,
+    );
+    expect(stats.allTimeFocusMinutes, 24);
+    expect(stats.todayFocusMinutes, 20);
+    expect(stats.weekCompletedMinutes, 20);
+    expect(stats.todayAttemptCount, 0);
+  });
+
   test('clock stays numeric', () {
     expect(formatFocusClock(const Duration(minutes: 4, seconds: 2)), '04:02');
     expect(formatFocusClock(const Duration(hours: 1, minutes: 2, seconds: 3)), '1:02:03');

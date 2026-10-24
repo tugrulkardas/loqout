@@ -180,6 +180,70 @@
   },
   "lockTodayOnStreak": "Today is on your streak ✓",
   "lockStartToday": "Start today",
+  "lockMinutesShort": "{count} min",
+  "@lockMinutesShort": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lockHoursShort": "{hours} h",
+  "@lockHoursShort": {
+    "placeholders": {
+      "hours": {"type": "String"}
+    }
+  },
+  "lockCumulativeToday": "Today {amount}",
+  "@lockCumulativeToday": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "lockCumulativeWeek": "This week {amount}",
+  "@lockCumulativeWeek": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "lockCumulativeAllTime": "All time {amount}",
+  "@lockCumulativeAllTime": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "lockDayFocusShare": "{percent}% of today in LoqOut focus",
+  "@lockDayFocusShare": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "lockWeekFocusShare": "{percent}% of this week's waking time",
+  "@lockWeekFocusShare": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "lockFocusShareNote": "Focus time inside LoqOut, not screen time.",
+  "lockDayFocusShareUnder": "Under 1% of today in LoqOut focus",
+  "lockWeekFocusShareUnder": "Under 1% of this week's waking time",
+  "lockAttemptsToday": "{count, plural, =1{You tried to open a locked app once today. We blocked it.} other{You tried to open locked apps {count} times today. We blocked every one.}}",
+  "@lockAttemptsToday": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lockAttemptsSession": "{count, plural, =1{1 time this session.} other{{count} times this session.}}",
+  "@lockAttemptsSession": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "lockInsightFriction": "{count} blocks in 7 days. About {minutes} min — an estimate, not measured screen time.",
+  "@lockInsightFriction": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
   "lockUnlockAction": "Unlock",
   "lockHoldSemanticsHint": "Double-tap to unlock without holding.",
   "insightsFrictionEstimate": "Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.",

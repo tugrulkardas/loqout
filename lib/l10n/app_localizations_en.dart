@@ -373,6 +373,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockStartToday => 'Start today';
 
   @override
+  String lockMinutesShort(int count) {
+    return '$count min';
+  }
+
+  @override
+  String lockHoursShort(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String lockCumulativeToday(String amount) {
+    return 'Today $amount';
+  }
+
+  @override
+  String lockCumulativeWeek(String amount) {
+    return 'This week $amount';
+  }
+
+  @override
+  String lockCumulativeAllTime(String amount) {
+    return 'All time $amount';
+  }
+
+  @override
+  String lockDayFocusShare(int percent) {
+    return '$percent% of today in LoqOut focus';
+  }
+
+  @override
+  String lockWeekFocusShare(int percent) {
+    return '$percent% of this week\'s waking time';
+  }
+
+  @override
+  String get lockFocusShareNote => 'Focus time inside LoqOut, not screen time.';
+
+  @override
+  String get lockDayFocusShareUnder => 'Under 1% of today in LoqOut focus';
+
+  @override
+  String get lockWeekFocusShareUnder => 'Under 1% of this week\'s waking time';
+
+  @override
+  String lockAttemptsToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You tried to open locked apps $count times today. We blocked every one.',
+      one: 'You tried to open a locked app once today. We blocked it.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lockAttemptsSession(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count times this session.',
+      one: '1 time this session.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lockInsightFriction(int count, int minutes) {
+    return '$count blocks in 7 days. About $minutes min — an estimate, not measured screen time.';
+  }
+
+  @override
   String get lockUnlockAction => 'Unlock';
 
   @override

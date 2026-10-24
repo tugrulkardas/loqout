@@ -692,6 +692,84 @@ abstract class AppLocalizations {
   /// **'Start today'**
   String get lockStartToday;
 
+  /// No description provided for @lockMinutesShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String lockMinutesShort(int count);
+
+  /// No description provided for @lockHoursShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h'**
+  String lockHoursShort(String hours);
+
+  /// No description provided for @lockCumulativeToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today {amount}'**
+  String lockCumulativeToday(String amount);
+
+  /// No description provided for @lockCumulativeWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week {amount}'**
+  String lockCumulativeWeek(String amount);
+
+  /// No description provided for @lockCumulativeAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All time {amount}'**
+  String lockCumulativeAllTime(String amount);
+
+  /// No description provided for @lockDayFocusShare.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of today in LoqOut focus'**
+  String lockDayFocusShare(int percent);
+
+  /// No description provided for @lockWeekFocusShare.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of this week\'s waking time'**
+  String lockWeekFocusShare(int percent);
+
+  /// No description provided for @lockFocusShareNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus time inside LoqOut, not screen time.'**
+  String get lockFocusShareNote;
+
+  /// No description provided for @lockDayFocusShareUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under 1% of today in LoqOut focus'**
+  String get lockDayFocusShareUnder;
+
+  /// No description provided for @lockWeekFocusShareUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'Under 1% of this week\'s waking time'**
+  String get lockWeekFocusShareUnder;
+
+  /// No description provided for @lockAttemptsToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{You tried to open a locked app once today. We blocked it.} other{You tried to open locked apps {count} times today. We blocked every one.}}'**
+  String lockAttemptsToday(int count);
+
+  /// No description provided for @lockAttemptsSession.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 time this session.} other{{count} times this session.}}'**
+  String lockAttemptsSession(int count);
+
+  /// No description provided for @lockInsightFriction.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} blocks in 7 days. About {minutes} min — an estimate, not measured screen time.'**
+  String lockInsightFriction(int count, int minutes);
+
   /// No description provided for @lockUnlockAction.
   ///
   /// In en, this message translates to:

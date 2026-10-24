@@ -371,6 +371,78 @@ class AppLocalizationsTr extends AppLocalizations {
   String get lockStartToday => 'Bugün başla';
 
   @override
+  String lockMinutesShort(int count) {
+    return '$count dk';
+  }
+
+  @override
+  String lockHoursShort(String hours) {
+    return '$hours sa';
+  }
+
+  @override
+  String lockCumulativeToday(String amount) {
+    return 'Bugün $amount';
+  }
+
+  @override
+  String lockCumulativeWeek(String amount) {
+    return 'Bu hafta $amount';
+  }
+
+  @override
+  String lockCumulativeAllTime(String amount) {
+    return 'Tüm zaman $amount';
+  }
+
+  @override
+  String lockDayFocusShare(int percent) {
+    return 'Günün %$percent\'ini odakta geçirdin';
+  }
+
+  @override
+  String lockWeekFocusShare(int percent) {
+    return 'Bu hafta uyanık sürenin %$percent\'i';
+  }
+
+  @override
+  String get lockFocusShareNote =>
+      'LoqOut içindeki odak süresi. Ekran süresi değil.';
+
+  @override
+  String get lockDayFocusShareUnder => 'Günün %1\'inden azını odakta geçirdin';
+
+  @override
+  String get lockWeekFocusShareUnder => 'Bu hafta uyanık sürenin %1\'inden azı';
+
+  @override
+  String lockAttemptsToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bugün $count kez açmaya çalıştın, hepsinde engelledik.',
+      one: 'Bugün 1 kez açmaya çalıştın, engelledik.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lockAttemptsSession(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu oturumda $count kez.',
+      one: 'Bu oturumda 1 kez.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String lockInsightFriction(int count, int minutes) {
+    return '$count engelleme, son 7 gün. Yaklaşık $minutes dk — tahmin, ölçülmüş ekran süresi değil.';
+  }
+
+  @override
   String get lockUnlockAction => 'Kilidi aç';
 
   @override
