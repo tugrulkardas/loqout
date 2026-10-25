@@ -457,6 +457,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String lockImpactUnlock(int currentTokens, int requiredTokens) {
+    return '⚡ Balance: $currentTokens Impact Tokens • Next Unlock: $requiredTokens Token(s)';
+  }
+
+  @override
   String lockAppChipBlocked(String name, int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

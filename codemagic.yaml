@@ -45,9 +45,9 @@ workflows:
       - name: Build signed IPA
         script: |
           set -euo pipefail
-          # Builds 1 through 6 are already on App Store Connect. A rejected
-          # upload still consumes the number. Never fall below 7.
-          BUILD_NUMBER=7
+          # Builds 1 through 7 are already on App Store Connect. A rejected
+          # upload still consumes the number. Never fall below 8.
+          BUILD_NUMBER=8
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
             set +e
             RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions 2>/tmp/asc-build-lookup.txt)

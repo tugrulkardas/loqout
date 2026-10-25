@@ -776,6 +776,12 @@ abstract class AppLocalizations {
   /// **'You took back {percent}% of your day. Congratulations.'**
   String lockReclaimedDay(String percent);
 
+  /// No description provided for @lockImpactUnlock.
+  ///
+  /// In en, this message translates to:
+  /// **'⚡ Balance: {currentTokens} Impact Tokens • Next Unlock: {requiredTokens} Token(s)'**
+  String lockImpactUnlock(int currentTokens, int requiredTokens);
+
   /// No description provided for @lockAppChipBlocked.
   ///
   /// In en, this message translates to:

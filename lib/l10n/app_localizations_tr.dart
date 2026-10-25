@@ -451,7 +451,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String lockReclaimedDay(String percent) {
-    return 'Gününün %$percent\'sini geri aldın, tebrikler.';
+    return 'Gününün %$percent kadarını geri aldın, tebrikler.';
+  }
+
+  @override
+  String lockImpactUnlock(int currentTokens, int requiredTokens) {
+    return '⚡ Mevcut: $currentTokens Impact Token • Sıradaki Açılış: $requiredTokens Token';
   }
 
   @override

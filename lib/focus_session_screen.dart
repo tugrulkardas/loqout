@@ -17,6 +17,7 @@ import 'services/ios_shield_service.dart';
 import 'services/launcher_apps_service.dart';
 import 'services/permission_service.dart';
 import 'services/session_repository.dart';
+import 'services/wallet_manager.dart';
 import 'theme/tapfocus_theme.dart';
 import 'widgets/beta_qr_auth_button.dart';
 import 'widgets/emergency_override_dialog.dart';
@@ -151,6 +152,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
 
   Future<void> _loadLockedContext() async {
     try {
+      await WalletManager.instance.ensureLoaded();
       final sessions = await _sessions.loadAll();
       final stats = FocusStats.fromSessions(sessions);
       final insights = await InsightsService().load();
@@ -636,12 +638,12 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     await _unlockSession(viaEmergencyOverride: true);
   }
 
-  List<Widget> _lockedAppRows(
+  Widget _lockedAppWrap(
     TapFocusColors c,
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    final style = theme.textTheme.bodyMedium?.copyWith(color: c.textPrimary);
+    final chips = <Widget>[];
     if (IosShieldService.isSupported) {
       final rows = _iosAppImpulses.isNotEmpty
           ? _iosAppImpulses
@@ -649,54 +651,92 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               for (var slot = 1; slot <= (_shieldedApps ?? 0); slot++)
                 IosBlockedAppImpulse(slot: slot, count: 0),
             ];
-      return [
-        for (final row in rows)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              row.count > 0
-                  ? l10n.lockAppChipImpulses(
-                      l10n.lockBlockedAppSlot(row.slot),
-                      row.count,
-                    )
-                  : l10n.lockAppChipLocked(l10n.lockBlockedAppSlot(row.slot)),
-              textAlign: TextAlign.center,
-              style: style,
-            ),
+      for (final row in rows) {
+        final name = l10n.lockBlockedAppSlot(row.slot);
+        chips.add(
+          _appChip(
+            c,
+            theme,
+            label: row.count > 0
+                ? l10n.lockAppChipBlocked(name, row.count)
+                : l10n.lockAppChipLocked(name),
+            warned: row.count > 0,
           ),
-      ];
+        );
+      }
+    } else {
+      for (var index = 0; index < _blockedPackages.length; index++) {
+        final package = _blockedPackages[index];
+        final count = _attemptsByPackage[package] ?? 0;
+        chips.add(
+          _appChip(
+            c,
+            theme,
+            label: _appChipLabel(l10n, index),
+            warned: count > 0,
+            icon: _lockedIcons[package],
+          ),
+        );
+      }
     }
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: chips,
+      ),
+    );
+  }
 
-    return [
-      for (var index = 0; index < _blockedPackages.length; index++)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_lockedIcons[_blockedPackages[index]] != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: Image.memory(
-                    _lockedIcons[_blockedPackages[index]]!,
-                    width: 18,
-                    height: 18,
-                    gaplessPlayback: true,
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Text(
-                  _appChipLabel(l10n, index),
-                  textAlign: TextAlign.center,
-                  style: style,
+  Widget _appChip(
+    TapFocusColors c,
+    ThemeData theme, {
+    required String label,
+    required bool warned,
+    Uint8List? icon,
+  }) {
+    final border = warned ? c.warning : c.textMuted.withValues(alpha: 0.35);
+    final fill = warned
+        ? c.warningDim
+        : c.textMuted.withValues(alpha: 0.12);
+    final textColor = warned ? c.warningDeep : c.textSecondary;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.memory(
+                  icon,
+                  width: 14,
+                  height: 14,
+                  gaplessPlayback: true,
                 ),
               ),
+              const SizedBox(width: 6),
             ],
-          ),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
-    ];
+      ),
+    );
   }
 
   String _appChipLabel(AppLocalizations l10n, int index) {
@@ -995,6 +1035,8 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                     _moodLine(c, l10n, theme),
                     _lockedTargets(c, l10n, theme),
                     const SizedBox(height: 12),
+                    _impactUnlockPill(c, l10n, theme),
+                    const SizedBox(height: 8),
                     _streakNotice(c, l10n, theme, atRisk),
                     const SizedBox(height: 8),
                     HoldToUnlockButton(
@@ -1137,7 +1179,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: c.textSecondary),
         ),
-        ..._lockedAppRows(c, l10n, theme),
+        _lockedAppWrap(c, l10n, theme),
         if (_lastViolationPackage != null) ...[
           const SizedBox(height: 4),
           Text(
@@ -1150,6 +1192,43 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
           ),
         ],
       ],
+    );
+  }
+
+  Widget _impactUnlockPill(
+    TapFocusColors c,
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
+    return ListenableBuilder(
+      listenable: WalletManager.instance,
+      builder: (context, _) {
+        final snap = WalletManager.instance.snapshot;
+        return Align(
+          alignment: Alignment.center,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: c.accentDim,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: c.accent),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Text(
+                l10n.lockImpactUnlock(
+                  snap.tokenBalance,
+                  snap.nextOverrideCost,
+                ),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

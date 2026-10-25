@@ -239,6 +239,13 @@
   },
   "lockImpulsesBlocked": "{count, plural, =1{🛡️ 1 Impulse Blocked} other{🛡️ {count} Impulses Blocked}}",
   "lockReclaimedDay": "You took back {percent}% of your day. Congratulations.",
+  "lockImpactUnlock": "⚡ Balance: {currentTokens} Impact Tokens • Next Unlock: {requiredTokens} Token(s)",
+  "@lockImpactUnlock": {
+    "placeholders": {
+      "currentTokens": {"type": "int"},
+      "requiredTokens": {"type": "int"}
+    }
+  },
   "@lockReclaimedDay": {
     "placeholders": {
       "percent": {"type": "String"}
