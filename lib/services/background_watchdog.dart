@@ -90,6 +90,7 @@ Future<bool> startWatchdogService({
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(kPrefsInterventionCountKey, 0);
+        await prefs.setString(kPrefsInterventionByPackageKey, '{}');
       } catch (_) {}
     }
 

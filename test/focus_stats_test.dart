@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tapfocus_project/models/app_models.dart';
 import 'package:tapfocus_project/models/session_telemetry.dart';
 import 'package:tapfocus_project/services/focus_stats.dart';
+import 'package:tapfocus_project/services/intervention_counts.dart';
 
 FocusSessionRecord _ended({
   required String id,
@@ -130,6 +131,46 @@ void main() {
     ]);
     expect(const FocusStats.empty().isFreshRecord, isTrue);
     expect(stats.isFreshRecord, isFalse);
+  });
+
+  test('reclaimed day percent stays visible under one percent', () {
+    expect(
+      formatReclaimedDayPercent(
+        focusMinutes: 0,
+        wakingMinutes: kWakingMinutesPerDay,
+      ),
+      '0.0',
+    );
+    expect(
+      formatReclaimedDayPercent(
+        focusMinutes: 37 / 60,
+        wakingMinutes: kWakingMinutesPerDay,
+      ),
+      '0.1',
+    );
+    expect(
+      formatReclaimedDayPercent(
+        focusMinutes: 10,
+        wakingMinutes: kWakingMinutesPerDay,
+      ),
+      '1',
+    );
+    expect(
+      formatReclaimedDayPercent(
+        focusMinutes: 20 * 60,
+        wakingMinutes: kWakingMinutesPerDay,
+      ),
+      '100',
+    );
+  });
+
+  test('per-app attempt json keeps positive counts only', () {
+    expect(decodeInterventionCounts(null), isEmpty);
+    expect(
+      decodeInterventionCounts('{"com.instagram.android":3,"com.x":0}'),
+      {'com.instagram.android': 3},
+    );
+    expect(decodeInterventionCounts('not-json'), isEmpty);
   });
 
   test('focus share is capped waking time inside LoqOut', () {

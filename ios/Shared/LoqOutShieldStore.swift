@@ -1,3 +1,4 @@
+import CryptoKit
 import DeviceActivity
 import FamilyControls
 import Foundation
@@ -18,6 +19,10 @@ enum LoqOutShieldStore {
   private static let sessionActiveKey = "loqout.family.sessionActive"
   /// Shield-button taps for the open session. Not app launches.
   private static let impulseCountKey = "loqout.shield.impulseCount"
+  /// Stable hashes of shielded application tokens, in a fixed order.
+  private static let appSlotsKey = "loqout.shield.appSlots"
+  /// Per-token primary-button taps for the open session.
+  private static let impulseByTokenKey = "loqout.shield.impulseByToken"
 
   private static var defaults: UserDefaults? {
     UserDefaults(suiteName: appGroupId)
@@ -44,6 +49,59 @@ enum LoqOutShieldStore {
     guard isSessionActive, let store = defaults else { return }
     store.set(store.integer(forKey: impulseCountKey) + 1, forKey: impulseCountKey)
     store.synchronize()
+  }
+
+  /// Primary button on an application shield. Also increments [impulseCount].
+  static func recordApplicationImpulse(_ token: ApplicationToken) {
+    recordImpulse()
+    guard isSessionActive, let store = defaults else { return }
+    let key = applicationTokenKey(token)
+    var counts = impulseCounts()
+    counts[key] = (counts[key] ?? 0) + 1
+    store.set(counts, forKey: impulseByTokenKey)
+    var slots = applicationSlots()
+    if !slots.contains(key) {
+      slots.append(key)
+      store.set(slots, forKey: appSlotsKey)
+    }
+    store.synchronize()
+  }
+
+  /// One row per shielded app. [slot] is 1-based. Counts stay 0 until a tap.
+  static func impulseBreakdown() -> [[String: Int]] {
+    var slots = applicationSlots()
+    let counts = impulseCounts()
+    for key in counts.keys.sorted() where !slots.contains(key) {
+      slots.append(key)
+    }
+    return slots.enumerated().map { index, key in
+      ["slot": index + 1, "count": counts[key] ?? 0]
+    }
+  }
+
+  static func applicationTokenKey(_ token: ApplicationToken) -> String {
+    let data = (try? JSONEncoder().encode(token)) ?? Data()
+    let digest = SHA256.hash(data: data)
+    return digest.map { String(format: "%02x", $0) }.joined()
+  }
+
+  private static func applicationSlots() -> [String] {
+    defaults?.stringArray(forKey: appSlotsKey) ?? []
+  }
+
+  private static func impulseCounts() -> [String: Int] {
+    guard let raw = defaults?.dictionary(forKey: impulseByTokenKey) else {
+      return [:]
+    }
+    var counts: [String: Int] = [:]
+    for (key, value) in raw {
+      if let number = value as? Int {
+        counts[key] = number
+      } else if let number = value as? NSNumber {
+        counts[key] = number.intValue
+      }
+    }
+    return counts
   }
 
   static func resetImpulseCount() {
@@ -172,6 +230,9 @@ enum LoqOutShieldStore {
     let store = try requireDefaults()
     store.set(true, forKey: sessionActiveKey)
     store.set(0, forKey: impulseCountKey)
+    let slots = selection.applicationTokens.map(applicationTokenKey).sorted()
+    store.set(slots, forKey: appSlotsKey)
+    store.set([String: Int](), forKey: impulseByTokenKey)
     store.synchronize()
     apply(selection)
     do {

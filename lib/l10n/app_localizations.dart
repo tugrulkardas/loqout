@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @lockStreakDays.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1-day streak} other{{count}-day streak}}'**
+  /// **'{count, plural, =0{0-Day Streak} =1{1-Day Streak} other{{count}-Day Streak}}'**
   String lockStreakDays(int count);
 
   /// No description provided for @lockNoStreak.
@@ -767,8 +767,38 @@ abstract class AppLocalizations {
   /// No description provided for @lockImpulsesBlocked.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 Impulse Blocked} other{{count} Impulses Blocked}}'**
+  /// **'{count, plural, =1{🛡️ 1 Impulse Blocked} other{🛡️ {count} Impulses Blocked}}'**
   String lockImpulsesBlocked(int count);
+
+  /// No description provided for @lockReclaimedDay.
+  ///
+  /// In en, this message translates to:
+  /// **'You took back {percent}% of your day. Congratulations.'**
+  String lockReclaimedDay(String percent);
+
+  /// No description provided for @lockAppChipBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} • {count, plural, =1{1 blocked} other{{count} blocked}}'**
+  String lockAppChipBlocked(String name, int count);
+
+  /// No description provided for @lockAppChipLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} • Locked'**
+  String lockAppChipLocked(String name);
+
+  /// No description provided for @lockAppChipImpulses.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} • {count, plural, =1{1 impulse} other{{count} impulses}}'**
+  String lockAppChipImpulses(String name, int count);
+
+  /// No description provided for @lockBlockedAppSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked App #{index}'**
+  String lockBlockedAppSlot(int index);
 
   /// No description provided for @lockInsightFriction.
   ///

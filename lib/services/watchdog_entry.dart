@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -7,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:usage_stats/usage_stats.dart';
 
 import 'blocklist_service.dart';
+import 'intervention_counts.dart';
 
 /// Own package name — never treat TapFocus as a blocked foreground app.
 const String kTapFocusPackageName = 'com.tugrul.tapfocus.tapfocus_project';
@@ -14,6 +16,10 @@ const String kTapFocusPackageName = 'com.tugrul.tapfocus.tapfocus_project';
 const String kPrefsBlockedAppsKey = 'tapfocus_blocked_apps';
 const String kPrefsSessionActiveKey = 'tapfocus_session_active';
 const String kPrefsInterventionCountKey = 'tapfocus_intervention_count';
+
+/// Same map the lock screen reads. Defined next to the decoder so web builds
+/// do not import this isolate entry file.
+const String kPrefsInterventionByPackageKey = kInterventionByPackageKey;
 
 /// Native [TapFocusApplication] listens for these keys and brings TapFocus
 /// forward / shows a SYSTEM_ALERT_WINDOW block overlay. Mock NFC is unrelated.
@@ -161,7 +167,7 @@ void onWatchdogStart(ServiceInstance service) async {
         if (shouldIntervene) {
           lastInterventionAt = now;
           lastIntervenedPackage = currentApp;
-          await _incrementInterventionCount();
+          await _incrementInterventionCount(currentApp);
           // HyperOS often silently ignores Activity starts from a FGS.
           // Primary: SharedPreferences → TapFocusApplication (overlay + launch).
           // Fallback: service.openApp().
@@ -220,11 +226,19 @@ Future<List<String>> _loadPersistedBlockedApps() async {
   }
 }
 
-Future<void> _incrementInterventionCount() async {
+Future<void> _incrementInterventionCount(String package) async {
   try {
     final prefs = await SharedPreferences.getInstance();
     final next = (prefs.getInt(kPrefsInterventionCountKey) ?? 0) + 1;
     await prefs.setInt(kPrefsInterventionCountKey, next);
+    final counts = decodeInterventionCounts(
+      prefs.getString(kPrefsInterventionByPackageKey),
+    );
+    counts[package] = (counts[package] ?? 0) + 1;
+    await prefs.setString(
+      kPrefsInterventionByPackageKey,
+      jsonEncode(counts),
+    );
   } catch (_) {}
 }
 

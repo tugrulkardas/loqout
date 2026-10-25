@@ -330,8 +330,9 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count-day streak',
-      one: '1-day streak',
+      other: '$count-Day Streak',
+      one: '1-Day Streak',
+      zero: '0-Day Streak',
     );
     return '$_temp0';
   }
@@ -444,10 +445,47 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Impulses Blocked',
-      one: '1 Impulse Blocked',
+      other: '🛡️ $count Impulses Blocked',
+      one: '🛡️ 1 Impulse Blocked',
     );
     return '$_temp0';
+  }
+
+  @override
+  String lockReclaimedDay(String percent) {
+    return 'You took back $percent% of your day. Congratulations.';
+  }
+
+  @override
+  String lockAppChipBlocked(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count blocked',
+      one: '1 blocked',
+    );
+    return '$name • $_temp0';
+  }
+
+  @override
+  String lockAppChipLocked(String name) {
+    return '$name • Locked';
+  }
+
+  @override
+  String lockAppChipImpulses(String name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count impulses',
+      one: '1 impulse',
+    );
+    return '$name • $_temp0';
+  }
+
+  @override
+  String lockBlockedAppSlot(int index) {
+    return 'Blocked App #$index';
   }
 
   @override

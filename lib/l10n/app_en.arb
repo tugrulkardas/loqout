@@ -160,7 +160,7 @@
       "minutes": {"type": "int"}
     }
   },
-  "lockStreakDays": "{count, plural, =1{1-day streak} other{{count}-day streak}}",
+  "lockStreakDays": "{count, plural, =0{0-Day Streak} =1{1-Day Streak} other{{count}-Day Streak}}",
   "@lockStreakDays": {
     "placeholders": {
       "count": {"type": "int"}
@@ -237,7 +237,39 @@
       "count": {"type": "int"}
     }
   },
-  "lockImpulsesBlocked": "{count, plural, =1{1 Impulse Blocked} other{{count} Impulses Blocked}}",
+  "lockImpulsesBlocked": "{count, plural, =1{🛡️ 1 Impulse Blocked} other{🛡️ {count} Impulses Blocked}}",
+  "lockReclaimedDay": "You took back {percent}% of your day. Congratulations.",
+  "@lockReclaimedDay": {
+    "placeholders": {
+      "percent": {"type": "String"}
+    }
+  },
+  "lockAppChipBlocked": "{name} • {count, plural, =1{1 blocked} other{{count} blocked}}",
+  "@lockAppChipBlocked": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "lockAppChipLocked": "{name} • Locked",
+  "@lockAppChipLocked": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "lockAppChipImpulses": "{name} • {count, plural, =1{1 impulse} other{{count} impulses}}",
+  "@lockAppChipImpulses": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "lockBlockedAppSlot": "Blocked App #{index}",
+  "@lockBlockedAppSlot": {
+    "placeholders": {
+      "index": {"type": "int"}
+    }
+  },
   "@lockImpulsesBlocked": {
     "placeholders": {
       "count": {"type": "int"}

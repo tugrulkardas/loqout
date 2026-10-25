@@ -4,6 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_localizations.dart';
 
+/// One shielded app on iOS. The slot is a stable anonymous index, not a name.
+class IosBlockedAppImpulse {
+  const IosBlockedAppImpulse({required this.slot, required this.count});
+
+  final int slot;
+  final int count;
+}
+
 /// Opaque Family Controls selection. Apple does not expose bundle ids.
 class IosShieldSelection {
   const IosShieldSelection({
@@ -266,6 +274,30 @@ class IosShieldService {
     } catch (e) {
       debugPrint('impulseCount failed: $e');
       return 0;
+    }
+  }
+
+  /// One row per shielded app. Slot numbers are anonymous. Apple does not
+  /// give the app name for an [ApplicationToken].
+  Future<List<IosBlockedAppImpulse>> impulseBreakdown() async {
+    if (!isSupported) return const [];
+    try {
+      final raw = await _channel.invokeMethod<List<dynamic>>('impulseBreakdown');
+      if (raw == null) return const [];
+      final rows = <IosBlockedAppImpulse>[];
+      for (final item in raw) {
+        if (item is! Map) continue;
+        rows.add(
+          IosBlockedAppImpulse(
+            slot: IosShieldSelection._asInt(item['slot']),
+            count: IosShieldSelection._asInt(item['count']),
+          ),
+        );
+      }
+      return rows;
+    } catch (e) {
+      debugPrint('impulseBreakdown failed: $e');
+      return const [];
     }
   }
 

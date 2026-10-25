@@ -180,6 +180,27 @@ class StreakRingState {
   final bool reached;
 }
 
+/// Lock-screen day share, including the open session from the first second.
+///
+/// Under 1% uses one decimal. Any positive share that would show as 0.0 is
+/// raised to 0.1 so a short session does not look like zero. At or above 1%
+/// the value is a whole number, capped at 100. This is LoqOut focus time
+/// against [kWakingMinutesPerDay], not screen time.
+String formatReclaimedDayPercent({
+  required double focusMinutes,
+  required int wakingMinutes,
+}) {
+  if (wakingMinutes <= 0 || focusMinutes <= 0) return '0.0';
+  final percent = (focusMinutes * 100) / wakingMinutes;
+  if (percent >= 100) return '100';
+  if (percent < 1) {
+    final tenths = (percent * 10).ceil().clamp(1, 9);
+    return (tenths / 10).toStringAsFixed(1);
+  }
+  final rounded = percent.round().clamp(1, 99);
+  return '$rounded';
+}
+
 /// Percent of waking time spent in LoqOut focus, rounded and capped at 100.
 ///
 /// [focusMinutes] is completed focus in the window, plus the open session

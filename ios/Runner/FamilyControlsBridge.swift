@@ -61,6 +61,8 @@ final class FamilyControlsBridge: NSObject, UIAdaptivePresentationControllerDele
       result(LoqOutShieldStore.isSessionActive)
     case "impulseCount":
       result(LoqOutShieldStore.impulseCount)
+    case "impulseBreakdown":
+      result(LoqOutShieldStore.impulseBreakdown())
     case "restoreShield":
       LoqOutShieldStore.reapplyIfSessionActive()
       if LoqOutShieldStore.isSessionActive {

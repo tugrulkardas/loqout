@@ -7,7 +7,9 @@ final class LoqOutShieldAction: ShieldActionDelegate {
     for application: ApplicationToken,
     completionHandler: @escaping (ShieldActionResponse) -> Void
   ) {
-    note(action)
+    if action == .primaryButtonPressed {
+      LoqOutShieldStore.recordApplicationImpulse(application)
+    }
     completionHandler(.close)
   }
 

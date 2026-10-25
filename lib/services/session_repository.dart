@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart' show supabase;
 import '../models/session_telemetry.dart';
+import 'intervention_counts.dart';
 
 /// Local-first session store with best-effort Supabase sync.
 class SessionRepository {
@@ -107,16 +108,26 @@ class SessionRepository {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_activeSessionKey);
     await prefs.setInt(_interventionKey, 0);
+    await prefs.setString(kInterventionByPackageKey, '{}');
   }
 
   Future<void> resetInterventionCount() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_interventionKey, 0);
+    await prefs.setString(kInterventionByPackageKey, '{}');
   }
 
   Future<int> readInterventionCount() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_interventionKey) ?? 0;
+  }
+
+  /// Attempts per package for the open session. Written by the watchdog.
+  Future<Map<String, int>> readInterventionCountsByPackage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return decodeInterventionCounts(
+      prefs.getString(kInterventionByPackageKey),
+    );
   }
 
   Future<int> incrementInterventionCount() async {

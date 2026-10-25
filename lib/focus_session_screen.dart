@@ -102,6 +102,8 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
   FocusStats _stats = const FocusStats.empty();
   InsightsSnapshot? _insights;
   int _liveAttempts = 0;
+  Map<String, int> _attemptsByPackage = {};
+  List<IosBlockedAppImpulse> _iosAppImpulses = const [];
   Map<String, Uint8List> _lockedIcons = const {};
   int? _shieldedApps;
   int? _shieldedCategories;
@@ -152,16 +154,25 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       final sessions = await _sessions.loadAll();
       final stats = FocusStats.fromSessions(sessions);
       final insights = await InsightsService().load();
-      final liveAttempts = IosShieldService.isSupported
+      final ios = IosShieldService.isSupported;
+      final liveAttempts = ios
           ? await IosShieldService.instance.impulseCount()
           : useDesktopMockLauncherApps
               ? 0
               : await _sessions.readInterventionCount();
+      final iosApps = ios
+          ? await IosShieldService.instance.impulseBreakdown()
+          : const <IosBlockedAppImpulse>[];
+      final byPackage = ios
+          ? <String, int>{}
+          : await _sessions.readInterventionCountsByPackage();
       if (!mounted) return;
       setState(() {
         _stats = stats;
         _insights = insights;
         _liveAttempts = liveAttempts;
+        _iosAppImpulses = iosApps;
+        _attemptsByPackage = byPackage;
       });
     } catch (e, st) {
       debugPrint('Locked screen stats failed: $e\n$st');
@@ -240,10 +251,12 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       if (!isSessionActive) return;
       final pkg = event?['package'] as String?;
       final count = await _sessions.readInterventionCount();
+      final byPackage = await _sessions.readInterventionCountsByPackage();
       if (mounted) {
         setState(() {
           if (pkg != null && pkg.isNotEmpty) _lastViolationPackage = pkg;
           _liveAttempts = count;
+          _attemptsByPackage = byPackage;
         });
       }
       await InterventionService.bringToForeground(blockedPackage: pkg);
@@ -623,6 +636,86 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     await _unlockSession(viaEmergencyOverride: true);
   }
 
+  List<Widget> _lockedAppRows(
+    TapFocusColors c,
+    AppLocalizations l10n,
+    ThemeData theme,
+  ) {
+    final style = theme.textTheme.bodyMedium?.copyWith(color: c.textPrimary);
+    if (IosShieldService.isSupported) {
+      final rows = _iosAppImpulses.isNotEmpty
+          ? _iosAppImpulses
+          : [
+              for (var slot = 1; slot <= (_shieldedApps ?? 0); slot++)
+                IosBlockedAppImpulse(slot: slot, count: 0),
+            ];
+      return [
+        for (final row in rows)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              row.count > 0
+                  ? l10n.lockAppChipImpulses(
+                      l10n.lockBlockedAppSlot(row.slot),
+                      row.count,
+                    )
+                  : l10n.lockAppChipLocked(l10n.lockBlockedAppSlot(row.slot)),
+              textAlign: TextAlign.center,
+              style: style,
+            ),
+          ),
+      ];
+    }
+
+    return [
+      for (var index = 0; index < _blockedPackages.length; index++)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_lockedIcons[_blockedPackages[index]] != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.memory(
+                    _lockedIcons[_blockedPackages[index]]!,
+                    width: 18,
+                    height: 18,
+                    gaplessPlayback: true,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Text(
+                  _appChipLabel(l10n, index),
+                  textAlign: TextAlign.center,
+                  style: style,
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
+  String _appChipLabel(AppLocalizations l10n, int index) {
+    final package = _blockedPackages[index];
+    final stored = index < _blockedAppNames.length
+        ? _blockedAppNames[index].trim()
+        : '';
+    final name = stored.isNotEmpty ? stored : _fallbackAppName(package);
+    final count = _attemptsByPackage[package] ?? 0;
+    return count > 0
+        ? l10n.lockAppChipBlocked(name, count)
+        : l10n.lockAppChipLocked(name);
+  }
+
+  String _fallbackAppName(String package) {
+    final tail = package.split('.').last.trim();
+    return tail.isEmpty ? package : tail;
+  }
+
   String _lockedSummary(AppLocalizations l10n) {
     if (_shieldedApps != null ||
         _shieldedCategories != null ||
@@ -764,13 +857,13 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     final todayMinutes = _stats.todayFocusMinutes + liveWhole;
     final weekMinutes = _stats.weekFocusMinutes + liveWhole;
     final allMinutes = _stats.allTimeFocusMinutes + liveWhole;
-    final fresh = todayMinutes == 0 && weekMinutes == 0 && allMinutes == 0;
-    final todayShareMinutes = _stats.todayCompletedMinutes + shareLive;
-    final weekShareMinutes = _stats.weekCompletedMinutes + shareLive;
-    final todayShare = focusSharePercent(
-      focusMinutes: todayShareMinutes,
+    final elapsedMinutesExact =
+        elapsed.isNegative ? 0.0 : elapsed.inSeconds / 60.0;
+    final reclaimed = formatReclaimedDayPercent(
+      focusMinutes: _stats.todayCompletedMinutes + elapsedMinutesExact,
       wakingMinutes: kWakingMinutesPerDay,
     );
+    final weekShareMinutes = _stats.weekCompletedMinutes + shareLive;
     final weekShare = focusSharePercent(
       focusMinutes: weekShareMinutes,
       wakingMinutes: kWakingMinutesPerDay * 7,
@@ -782,9 +875,6 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     final atRisk = _streakEffect() == StreakEndEffect.doesNotCountToday &&
         _stats.streakDays > 0;
     final attemptTotal = _stats.todayAttemptCount + _liveAttempts;
-    final showAndroidAttempts =
-        !useDesktopMockLauncherApps && attemptTotal > 0;
-    final showIosImpulses = IosShieldService.isSupported && attemptTotal > 0;
     return Scaffold(
       backgroundColor: c.voidBlack,
       appBar: AppBar(
@@ -829,101 +919,69 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    if (fresh)
-                      Text(
-                        l10n.lockStartToday,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: c.textPrimary,
-                          fontWeight: FontWeight.w600,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 14,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          l10n.lockCumulativeToday(_amount(l10n, todayMinutes)),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: c.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      )
-                    else
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 14,
-                        runSpacing: 2,
-                        children: [
-                          Text(
-                            l10n.lockCumulativeToday(_amount(l10n, todayMinutes)),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: c.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                        Text(
+                          l10n.lockCumulativeWeek(_amount(l10n, weekMinutes)),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: c.textSecondary,
                           ),
-                          Text(
-                            l10n.lockCumulativeWeek(_amount(l10n, weekMinutes)),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: c.textSecondary,
-                            ),
+                        ),
+                        Text(
+                          l10n.lockCumulativeAllTime(_amount(l10n, allMinutes)),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: c.textSecondary,
                           ),
-                          Text(
-                            l10n.lockCumulativeAllTime(_amount(l10n, allMinutes)),
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: c.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 16),
                     _streakBlock(c, l10n, theme, streakCaption, ring.fraction),
-                    if (todayShareMinutes > 0 || weekShareMinutes > 0) ...[
-                      const SizedBox(height: 8),
-                      if (todayShareMinutes > 0)
-                        Text(
-                          todayShare == 0
-                              ? l10n.lockDayFocusShareUnder
-                              : l10n.lockDayFocusShare(todayShare),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: c.textSecondary,
-                          ),
-                        ),
-                      if (weekShareMinutes > 0)
-                        Text(
-                          weekShare == 0
-                              ? l10n.lockWeekFocusShareUnder
-                              : l10n.lockWeekFocusShare(weekShare),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: c.textSecondary,
-                          ),
-                        ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.lockReclaimedDay(reclaimed),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: c.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (weekShareMinutes > 0)
                       Text(
-                        l10n.lockFocusShareNote,
+                        weekShare == 0
+                            ? l10n.lockWeekFocusShareUnder
+                            : l10n.lockWeekFocusShare(weekShare),
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: c.textMuted,
+                          color: c.textSecondary,
                         ),
                       ),
-                    ],
-                    if (showIosImpulses) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        l10n.lockImpulsesBlocked(attemptTotal),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: c.textPrimary,
-                        ),
+                    Text(
+                      l10n.lockFocusShareNote,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: c.textMuted,
                       ),
-                    ] else if (showAndroidAttempts) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        l10n.lockAttemptsToday(attemptTotal),
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: c.textPrimary,
-                        ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.lockImpulsesBlocked(attemptTotal),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: c.textPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
-                      if (_liveAttempts > 0)
-                        Text(
-                          l10n.lockAttemptsSession(_liveAttempts),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: c.textMuted,
-                          ),
-                        ),
-                    ],
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       _insightLine(l10n),
@@ -991,24 +1049,23 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     final todayIndex = DateTime.now().weekday - DateTime.monday;
     return Column(
       children: [
-        if (_stats.streakDays > 0)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.local_fire_department, color: c.accent, size: 28),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  l10n.lockStreakDays(_stats.streakDays),
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: c.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.local_fire_department, color: c.accent, size: 28),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                l10n.lockStreakDays(_stats.streakDays),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Semantics(
           label: l10n.lockFocusTimeWeek(_stats.weekFocusMinutes),
@@ -1073,45 +1130,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
   }
 
   Widget _lockedTargets(TapFocusColors c, AppLocalizations l10n, ThemeData theme) {
-    final icons = <Widget>[];
-    if (!useDesktopMockLauncherApps) {
-      for (final package in _blockedPackages) {
-        final bytes = _lockedIcons[package];
-        if (bytes == null) continue;
-        icons.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 3),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(7),
-              child: Image.memory(
-                bytes,
-                width: 26,
-                height: 26,
-                gaplessPlayback: true,
-              ),
-            ),
-          ),
-        );
-        if (icons.length == 5) break;
-      }
-    }
     return Column(
       children: [
-        if (icons.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: ExcludeSemantics(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: icons,
-              ),
-            ),
-          ),
         Text(
           _lockedSummary(l10n),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: c.textSecondary),
         ),
+        ..._lockedAppRows(c, l10n, theme),
         if (_lastViolationPackage != null) ...[
           const SizedBox(height: 4),
           Text(
