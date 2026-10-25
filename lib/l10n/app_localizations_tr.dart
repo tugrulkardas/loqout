@@ -438,6 +438,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String lockImpulsesBlocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kez kalkana takıldın',
+      one: '1 kez kalkana takıldın',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String lockInsightFriction(int count, int minutes) {
     return '$count engelleme, son 7 gün. Yaklaşık $minutes dk — tahmin, ölçülmüş ekran süresi değil.';
   }

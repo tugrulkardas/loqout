@@ -5,7 +5,7 @@ import LocalAuthentication
 import ManagedSettings
 import os
 
-/// Shared by the Runner and the Device Activity Monitor extension.
+/// Shared by the Runner, the Device Activity Monitor, and Shield Action.
 ///
 /// Tokens from FamilyActivityPicker are opaque. They live in the App Group so
 /// the extension can re-apply the shield without Flutter running.
@@ -16,6 +16,8 @@ enum LoqOutShieldStore {
 
   private static let selectionKey = "loqout.family.selection"
   private static let sessionActiveKey = "loqout.family.sessionActive"
+  /// Shield-button taps for the open session. Not app launches.
+  private static let impulseCountKey = "loqout.shield.impulseCount"
 
   private static var defaults: UserDefaults? {
     UserDefaults(suiteName: appGroupId)
@@ -30,6 +32,23 @@ enum LoqOutShieldStore {
 
   static var isSessionActive: Bool {
     defaults?.bool(forKey: sessionActiveKey) ?? false
+  }
+
+  /// Taps on the shield button during the open session. Zero after the next
+  /// session starts. This is not a count of every locked-app launch.
+  static var impulseCount: Int {
+    defaults?.integer(forKey: impulseCountKey) ?? 0
+  }
+
+  static func recordImpulse() {
+    guard isSessionActive, let store = defaults else { return }
+    store.set(store.integer(forKey: impulseCountKey) + 1, forKey: impulseCountKey)
+    store.synchronize()
+  }
+
+  static func resetImpulseCount() {
+    defaults?.set(0, forKey: impulseCountKey)
+    defaults?.synchronize()
   }
 
   static func authorizationStatusRaw() -> String {
@@ -152,6 +171,7 @@ enum LoqOutShieldStore {
     }
     let store = try requireDefaults()
     store.set(true, forKey: sessionActiveKey)
+    store.set(0, forKey: impulseCountKey)
     store.synchronize()
     apply(selection)
     do {

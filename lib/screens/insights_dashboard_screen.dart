@@ -9,6 +9,7 @@ import '../models/session_telemetry.dart';
 import '../services/beta_telemetry_export.dart';
 import '../services/demo_telemetry_seeder.dart';
 import '../services/insights_service.dart';
+import '../services/ios_shield_service.dart';
 import '../services/launcher_apps_service.dart';
 import '../theme/tapfocus_theme.dart';
 import '../widgets/language_menu_button.dart';
@@ -465,7 +466,20 @@ class _MoodDistractionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!attemptsAreMeasured || top == null || topMood == null)
+          if (IosShieldService.isSupported &&
+              snapshot.interventionsLast7Days > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                l10n.lockImpulsesBlocked(snapshot.interventionsLast7Days),
+                style: TextStyle(
+                  color: c.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            )
+          else if (!attemptsAreMeasured || top == null || topMood == null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
@@ -565,26 +579,35 @@ class _FrictionScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hours = snapshot.savedAttentionMinutes / 60;
     final l10n = context.l10n;
+    final impulses = snapshot.interventionsLast7Days;
+    final iosImpulses = IosShieldService.isSupported;
     return _InsightCard(
       title: l10n.insightsFrictionTitle,
       subtitle: l10n.insightsFrictionEstimate,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: _MetricTile(
-              value: '${snapshot.interventionsLast7Days}',
-              label: 'Interventions',
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _MetricTile(
-              value: hours >= 1
-                  ? '${hours.toStringAsFixed(1)}h'
-                  : '${snapshot.savedAttentionMinutes}m',
-              label: l10n.insightsEstimatedAttention,
-              emphasize: true,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _MetricTile(
+                  value: '$impulses',
+                  label: iosImpulses
+                      ? l10n.lockImpulsesBlocked(impulses)
+                      : 'Interventions',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MetricTile(
+                  value: hours >= 1
+                      ? '${hours.toStringAsFixed(1)}h'
+                      : '${snapshot.savedAttentionMinutes}m',
+                  label: l10n.insightsEstimatedAttention,
+                  emphasize: true,
+                ),
+              ),
+            ],
           ),
         ],
       ),

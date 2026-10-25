@@ -237,6 +237,12 @@
       "count": {"type": "int"}
     }
   },
+  "lockImpulsesBlocked": "{count, plural, =1{1 Impulse Blocked} other{{count} Impulses Blocked}}",
+  "@lockImpulsesBlocked": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "lockInsightFriction": "{count} blocks in 7 days. About {minutes} min — an estimate, not measured screen time.",
   "@lockInsightFriction": {
     "placeholders": {

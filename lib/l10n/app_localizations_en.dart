@@ -440,6 +440,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String lockImpulsesBlocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Impulses Blocked',
+      one: '1 Impulse Blocked',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String lockInsightFriction(int count, int minutes) {
     return '$count blocks in 7 days. About $minutes min — an estimate, not measured screen time.';
   }

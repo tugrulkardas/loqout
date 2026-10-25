@@ -21,6 +21,9 @@
 		B1A1000B2F00000100FC0001 /* DeviceActivityMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1A100062F00000100FC0001 /* DeviceActivityMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		B1A200072F00000100FC0001 /* LoqOutShieldConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A200012F00000100FC0001 /* LoqOutShieldConfiguration.swift */; };
 		B1A2000B2F00000100FC0001 /* ShieldConfiguration.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1A200062F00000100FC0001 /* ShieldConfiguration.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1A300042F00000100FC0001 /* LoqOutShieldStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A100042F00000100FC0001 /* LoqOutShieldStore.swift */; };
+		B1A300072F00000100FC0001 /* LoqOutShieldAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A300012F00000100FC0001 /* LoqOutShieldAction.swift */; };
+		B1A3000B2F00000100FC0001 /* ShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B1A300062F00000100FC0001 /* ShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +48,13 @@
 			remoteGlobalIDString = B1A200112F00000100FC0001;
 			remoteInfo = ShieldConfiguration;
 		};
+		B1A300122F00000100FC0001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B1A300112F00000100FC0001;
+			remoteInfo = ShieldAction;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -66,6 +76,7 @@
 			files = (
 				B1A1000B2F00000100FC0001 /* DeviceActivityMonitor.appex in Embed Foundation Extensions */,
 				B1A2000B2F00000100FC0001 /* ShieldConfiguration.appex in Embed Foundation Extensions */,
+				B1A3000B2F00000100FC0001 /* ShieldAction.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -100,6 +111,10 @@
 		B1A200022F00000100FC0001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1A200032F00000100FC0001 /* ShieldConfiguration.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldConfiguration.entitlements; sourceTree = "<group>"; };
 		B1A200062F00000100FC0001 /* ShieldConfiguration.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1A300012F00000100FC0001 /* LoqOutShieldAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoqOutShieldAction.swift; sourceTree = "<group>"; };
+		B1A300022F00000100FC0001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1A300032F00000100FC0001 /* ShieldAction.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShieldAction.entitlements; sourceTree = "<group>"; };
+		B1A300062F00000100FC0001 /* ShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +133,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B1A2000F2F00000100FC0001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1A3000F2F00000100FC0001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -155,6 +177,7 @@
 				B1A1000C2F00000100FC0001 /* Shared */,
 				B1A1000D2F00000100FC0001 /* DeviceActivityMonitor */,
 				B1A2000D2F00000100FC0001 /* ShieldConfiguration */,
+				B1A3000D2F00000100FC0001 /* ShieldAction */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 			);
@@ -166,6 +189,7 @@
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				B1A100062F00000100FC0001 /* DeviceActivityMonitor.appex */,
 				B1A200062F00000100FC0001 /* ShieldConfiguration.appex */,
+				B1A300062F00000100FC0001 /* ShieldAction.appex */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 			);
 			name = Products;
@@ -214,6 +238,16 @@
 				B1A200032F00000100FC0001 /* ShieldConfiguration.entitlements */,
 			);
 			path = ShieldConfiguration;
+			sourceTree = "<group>";
+		};
+		B1A3000D2F00000100FC0001 /* ShieldAction */ = {
+			isa = PBXGroup;
+			children = (
+				B1A300012F00000100FC0001 /* LoqOutShieldAction.swift */,
+				B1A300022F00000100FC0001 /* Info.plist */,
+				B1A300032F00000100FC0001 /* ShieldAction.entitlements */,
+			);
+			path = ShieldAction;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -270,6 +304,23 @@
 			productReference = B1A200062F00000100FC0001 /* ShieldConfiguration.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		B1A300112F00000100FC0001 /* ShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B1A300152F00000100FC0001 /* Build configuration list for PBXNativeTarget "ShieldAction" */;
+			buildPhases = (
+				B1A3000E2F00000100FC0001 /* Sources */,
+				B1A3000F2F00000100FC0001 /* Frameworks */,
+				B1A300102F00000100FC0001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShieldAction;
+			productName = ShieldAction;
+			productReference = B1A300062F00000100FC0001 /* ShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		97C146ED1CF9000F007C117D /* Runner */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 97C147051CF9000F007C117D /* Build configuration list for PBXNativeTarget "Runner" */;
@@ -287,6 +338,7 @@
 			dependencies = (
 				B1A100132F00000100FC0001 /* PBXTargetDependency */,
 				B1A200132F00000100FC0001 /* PBXTargetDependency */,
+				B1A300132F00000100FC0001 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			productName = Runner;
@@ -317,6 +369,9 @@
 					B1A200112F00000100FC0001 = {
 						CreatedOnToolsVersion = 15.0;
 					};
+					B1A300112F00000100FC0001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
 				};
 			};
 			buildConfigurationList = 97C146E91CF9000F007C117D /* Build configuration list for PBXProject "Runner" */;
@@ -335,6 +390,7 @@
 				97C146ED1CF9000F007C117D /* Runner */,
 				B1A100112F00000100FC0001 /* DeviceActivityMonitor */,
 				B1A200112F00000100FC0001 /* ShieldConfiguration */,
+				B1A300112F00000100FC0001 /* ShieldAction */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 			);
 		};
@@ -367,6 +423,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B1A200102F00000100FC0001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B1A300102F00000100FC0001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -446,6 +509,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B1A3000E2F00000100FC0001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1A300072F00000100FC0001 /* LoqOutShieldAction.swift in Sources */,
+				B1A300042F00000100FC0001 /* LoqOutShieldStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -463,6 +535,11 @@
 			isa = PBXTargetDependency;
 			target = B1A200112F00000100FC0001 /* ShieldConfiguration */;
 			targetProxy = B1A200122F00000100FC0001 /* PBXContainerItemProxy */;
+		};
+		B1A300132F00000100FC0001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = B1A300112F00000100FC0001 /* ShieldAction */;
+			targetProxy = B1A300122F00000100FC0001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -566,7 +643,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.RunnerTests;
@@ -583,7 +660,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.RunnerTests;
@@ -598,7 +675,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.RunnerTests;
@@ -772,7 +849,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -797,7 +874,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -822,7 +899,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = DeviceActivityMonitor/DeviceActivityMonitor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = DeviceActivityMonitor/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -847,7 +924,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -872,7 +949,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -897,7 +974,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = ShieldConfiguration/ShieldConfiguration.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 5;
+				CURRENT_PROJECT_VERSION = 6;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShieldConfiguration/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -908,6 +985,81 @@
 				);
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.ShieldConfiguration;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
+		B1A300162F00000100FC0001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShieldAction/ShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B1A300172F00000100FC0001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShieldAction/ShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.ShieldAction;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B1A300182F00000100FC0001 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = ShieldAction/ShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 6;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.loqout.app.ShieldAction;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -965,6 +1117,16 @@
 				B1A200162F00000100FC0001 /* Debug */,
 				B1A200172F00000100FC0001 /* Release */,
 				B1A200182F00000100FC0001 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B1A300152F00000100FC0001 /* Build configuration list for PBXNativeTarget "ShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B1A300162F00000100FC0001 /* Debug */,
+				B1A300172F00000100FC0001 /* Release */,
+				B1A300182F00000100FC0001 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

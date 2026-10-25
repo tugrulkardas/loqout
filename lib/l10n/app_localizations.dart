@@ -764,6 +764,12 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 time this session.} other{{count} times this session.}}'**
   String lockAttemptsSession(int count);
 
+  /// No description provided for @lockImpulsesBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Impulse Blocked} other{{count} Impulses Blocked}}'**
+  String lockImpulsesBlocked(int count);
+
   /// No description provided for @lockInsightFriction.
   ///
   /// In en, this message translates to:

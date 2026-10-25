@@ -114,6 +114,7 @@
   "lockWeekFocusShareUnder": "Bu hafta uyanık sürenin %1'inden azı",
   "lockAttemptsToday": "{count, plural, =1{Bugün 1 kez açmaya çalıştın, engelledik.} other{Bugün {count} kez açmaya çalıştın, hepsinde engelledik.}}",
   "lockAttemptsSession": "{count, plural, =1{Bu oturumda 1 kez.} other{Bu oturumda {count} kez.}}",
+  "lockImpulsesBlocked": "{count, plural, =1{1 kez kalkana takıldın} other{{count} kez kalkana takıldın}}",
   "lockInsightFriction": "{count} engelleme, son 7 gün. Yaklaşık {minutes} dk — tahmin, ölçülmüş ekran süresi değil.",
   "lockUnlockAction": "Kilidi aç",
   "lockHoldSemanticsHint": "Basılı tutmadan açmak için çift dokunun.",

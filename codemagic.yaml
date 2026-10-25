@@ -14,6 +14,7 @@ workflows:
         BUNDLE_ID: com.loqout.app
         EXTENSION_BUNDLE_ID: com.loqout.app.DeviceActivityMonitor
         SHIELD_CONFIGURATION_BUNDLE_ID: com.loqout.app.ShieldConfiguration
+        SHIELD_ACTION_BUNDLE_ID: com.loqout.app.ShieldAction
     scripts:
       - name: Flutter packages
         script: flutter pub get
@@ -24,7 +25,7 @@ workflows:
       - name: Fetch App Store signing files
         script: |
           # Creates the distribution certificate and App Store profiles when missing.
-          # Family Controls and the App Group must already be enabled on both App IDs.
+          # Family Controls and the App Group must already be enabled on every App ID.
           # This does not mark the build as internal-only, so external TestFlight stays available.
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -36,14 +37,17 @@ workflows:
           app-store-connect fetch-signing-files "$SHIELD_CONFIGURATION_BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
+          app-store-connect fetch-signing-files "$SHIELD_ACTION_BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
           keychain add-certificates
           xcode-project use-profiles
       - name: Build signed IPA
         script: |
           set -euo pipefail
-          # Builds 1 through 4 are already on App Store Connect. A rejected
-          # upload still consumes the number. Never fall below 5.
-          BUILD_NUMBER=5
+          # Builds 1 through 5 are already on App Store Connect. A rejected
+          # upload still consumes the number. Never fall below 6.
+          BUILD_NUMBER=6
           if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
             set +e
             RAW=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" --all-versions 2>/tmp/asc-build-lookup.txt)
@@ -67,7 +71,7 @@ workflows:
             exit 1
           fi
           # Runner reads FLUTTER_BUILD_NUMBER from the Flutter xcconfig.
-          # The shield extension does not, so stamp its literal version too.
+          # Extension targets do not, so stamp their literal versions too.
           sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9][0-9]*;/CURRENT_PROJECT_VERSION = ${BUILD_NUMBER};/g" ios/Runner.xcodeproj/project.pbxproj
           # Xcode script phases prefer this variable over the configuration name.
           # Release.xcconfig also sets it, so a leftover debug value cannot win.

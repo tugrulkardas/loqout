@@ -257,6 +257,18 @@ class IosShieldService {
     }
   }
 
+  /// Shield-button taps for the open session. Not locked-app launches.
+  Future<int> impulseCount() async {
+    if (!isSupported) return 0;
+    try {
+      final raw = await _channel.invokeMethod<int>('impulseCount');
+      return raw ?? 0;
+    } catch (e) {
+      debugPrint('impulseCount failed: $e');
+      return 0;
+    }
+  }
+
   Future<void> stopShield() async {
     if (!isSupported) return;
     try {

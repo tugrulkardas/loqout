@@ -84,7 +84,8 @@ class FocusSessionScreen extends StatefulWidget {
   State<FocusSessionScreen> createState() => _FocusSessionScreenState();
 }
 
-class _FocusSessionScreenState extends State<FocusSessionScreen> {
+class _FocusSessionScreenState extends State<FocusSessionScreen>
+    with WidgetsBindingObserver {
   final PermissionService _permissions = const PermissionService();
   final SessionRepository _sessions = SessionRepository();
   final BlocklistService _blocklist = BlocklistService();
@@ -112,6 +113,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _blockedPackages = List<String>.from(widget.blockedPackages);
     _blockedAppNames = List<String>.from(widget.blockedAppNames);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -126,9 +128,17 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _clock?.cancel();
     _violationSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isSessionActive) {
+      _loadLockedContext();
+    }
   }
 
   void _startClock() {
@@ -142,9 +152,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
       final sessions = await _sessions.loadAll();
       final stats = FocusStats.fromSessions(sessions);
       final insights = await InsightsService().load();
-      final liveAttempts = useDesktopMockLauncherApps
-          ? 0
-          : await _sessions.readInterventionCount();
+      final liveAttempts = IosShieldService.isSupported
+          ? await IosShieldService.instance.impulseCount()
+          : useDesktopMockLauncherApps
+              ? 0
+              : await _sessions.readInterventionCount();
       if (!mounted) return;
       setState(() {
         _stats = stats;
@@ -529,7 +541,6 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     if (_unlocking || !isSessionActive) return;
     setState(() => _unlocking = true);
     try {
-      final interventions = await _sessions.readInterventionCount();
       final endedAt = DateTime.now();
       final startedAt = _sessionStartedAt ?? endedAt;
       final durationMinutes = (() {
@@ -558,7 +569,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
             startedAt: startedAt,
           );
 
-      record.interventionCount = interventions;
+      record.interventionCount = IosShieldService.isSupported
+          ? await IosShieldService.instance.impulseCount()
+          : await _sessions.readInterventionCount();
       record.endedAt = endedAt;
       record.localEndDate = focusLocalDateKey(endedAt);
       record.durationMinutes = durationMinutes;
@@ -768,8 +781,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
         : l10n.lockMinutesToStreak(ring.minutesRemaining);
     final atRisk = _streakEffect() == StreakEndEffect.doesNotCountToday &&
         _stats.streakDays > 0;
-    final showAttempts = !useDesktopMockLauncherApps &&
-        (_stats.todayAttemptCount + _liveAttempts > 0);
+    final attemptTotal = _stats.todayAttemptCount + _liveAttempts;
+    final showAndroidAttempts =
+        !useDesktopMockLauncherApps && attemptTotal > 0;
+    final showIosImpulses = IosShieldService.isSupported && attemptTotal > 0;
     return Scaffold(
       backgroundColor: c.voidBlack,
       appBar: AppBar(
@@ -882,12 +897,19 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
                         ),
                       ),
                     ],
-                    if (showAttempts) ...[
+                    if (showIosImpulses) ...[
                       const SizedBox(height: 10),
                       Text(
-                        l10n.lockAttemptsToday(
-                          _stats.todayAttemptCount + _liveAttempts,
+                        l10n.lockImpulsesBlocked(attemptTotal),
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: c.textPrimary,
                         ),
+                      ),
+                    ] else if (showAndroidAttempts) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.lockAttemptsToday(attemptTotal),
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: c.textPrimary,
