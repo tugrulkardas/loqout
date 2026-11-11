@@ -347,6 +347,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lockHoldToUnlock => 'Hold to unlock';
 
   @override
+  String get lockNfcEndFocus => 'NFC — End Focus';
+
+  @override
+  String get lockNfcScanning => 'Hold your phone to the LoqOut Stone…';
+
+  @override
+  String get lockNfcReadFailed => 'Could not read the LoqOut Stone. Try again.';
+
+  @override
+  String lockNfcSessionError(String error) {
+    return 'NFC session error: $error';
+  }
+
+  @override
   String get lockStreakKeeps => 'Ending now keeps today on your streak.';
 
   @override
@@ -513,10 +527,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionUnlockHint =>
-      'Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.';
+      'Opening a locked app brings you back here.\nEnd focus with NFC (LoqOut Stone). QR is beta-only for testers. Emergency override burns Impact Credits.';
 
   @override
-  String get sessionScanQrUnlock => 'Scan QR (Beta NFC) — Unlock';
+  String get sessionScanQrUnlock => 'QR (Beta) — Unlock';
 
   @override
   String get sessionEmergencyUnlock => 'Emergency Unlock (Burn Credits)';

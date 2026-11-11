@@ -6,7 +6,8 @@ import LocalAuthentication
 import ManagedSettings
 import os
 
-/// Shared by the Runner, the Device Activity Monitor, and Shield Action.
+/// Shared by the Runner, Device Activity Monitor, Shield Configuration,
+/// and Shield Action.
 ///
 /// Tokens from FamilyActivityPicker are opaque. They live in the App Group so
 /// the extension can re-apply the shield without Flutter running.
@@ -17,12 +18,16 @@ enum LoqOutShieldStore {
 
   private static let selectionKey = "loqout.family.selection"
   private static let sessionActiveKey = "loqout.family.sessionActive"
-  /// Shield-button taps for the open session. Not app launches.
+  /// Shield hits for the open session (appearance or primary button).
   private static let impulseCountKey = "loqout.shield.impulseCount"
   /// Stable hashes of shielded application tokens, in a fixed order.
   private static let appSlotsKey = "loqout.shield.appSlots"
-  /// Per-token primary-button taps for the open session.
+  /// Per-token / per-name hits for the open session.
   private static let impulseByTokenKey = "loqout.shield.impulseByToken"
+  /// Wall-clock of the last counted hit. Stops double counts from iOS.
+  private static let lastImpulseAtKey = "loqout.shield.lastImpulseAt"
+  /// Same token/name within this window counts once.
+  private static let impulseDebounceSeconds: TimeInterval = 2.0
 
   private static var defaults: UserDefaults? {
     UserDefaults(suiteName: appGroupId)
@@ -39,30 +44,67 @@ enum LoqOutShieldStore {
     defaults?.bool(forKey: sessionActiveKey) ?? false
   }
 
-  /// Taps on the shield button during the open session. Zero after the next
-  /// session starts. This is not a count of every locked-app launch.
+  /// Shield hits during the open session. Zero after the next session starts.
   static var impulseCount: Int {
     defaults?.integer(forKey: impulseCountKey) ?? 0
   }
 
+  /// Primary button without an application token (category / website).
   static func recordImpulse() {
-    guard isSessionActive, let store = defaults else { return }
-    store.set(store.integer(forKey: impulseCountKey) + 1, forKey: impulseCountKey)
-    store.synchronize()
+    recordHit(slotKey: nil)
   }
 
-  /// Primary button on an application shield. Also increments [impulseCount].
+  /// Primary button on an application shield.
   static func recordApplicationImpulse(_ token: ApplicationToken) {
-    recordImpulse()
+    recordHit(slotKey: applicationTokenKey(token))
+  }
+
+  /// Shield cover just appeared. Counts once per short window so iOS calling
+  /// `configuration(shielding:)` more than once does not inflate the total.
+  static func recordShieldAppearance(displayName: String?) {
+    let slots = applicationSlots()
+    // One locked app: bump that slot so the chip updates with the total.
+    if slots.count == 1 {
+      recordHit(slotKey: slots[0])
+      return
+    }
+    let trimmed = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let key: String?
+    if let trimmed, !trimmed.isEmpty {
+      key = "name:\(trimmed)"
+    } else {
+      key = nil
+    }
+    recordHit(slotKey: key)
+  }
+
+  private static func recordHit(slotKey: String?) {
     guard isSessionActive, let store = defaults else { return }
-    let key = applicationTokenKey(token)
-    var counts = impulseCounts()
-    counts[key] = (counts[key] ?? 0) + 1
-    store.set(counts, forKey: impulseByTokenKey)
+    let now = Date().timeIntervalSince1970
+    let last = store.double(forKey: lastImpulseAtKey)
+    if last > 0, now - last < impulseDebounceSeconds {
+      return
+    }
+    store.set(now, forKey: lastImpulseAtKey)
+    store.set(store.integer(forKey: impulseCountKey) + 1, forKey: impulseCountKey)
+
     var slots = applicationSlots()
-    if !slots.contains(key) {
-      slots.append(key)
-      store.set(slots, forKey: appSlotsKey)
+    var counts = impulseCounts()
+    let resolvedKey: String?
+    if let slotKey {
+      resolvedKey = slotKey
+    } else if slots.count == 1 {
+      resolvedKey = slots[0]
+    } else {
+      resolvedKey = nil
+    }
+    if let resolvedKey {
+      counts[resolvedKey] = (counts[resolvedKey] ?? 0) + 1
+      if !slots.contains(resolvedKey) {
+        slots.append(resolvedKey)
+        store.set(slots, forKey: appSlotsKey)
+      }
+      store.set(counts, forKey: impulseByTokenKey)
     }
     store.synchronize()
   }
@@ -230,6 +272,7 @@ enum LoqOutShieldStore {
     let store = try requireDefaults()
     store.set(true, forKey: sessionActiveKey)
     store.set(0, forKey: impulseCountKey)
+    store.removeObject(forKey: lastImpulseAtKey)
     let slots = selection.applicationTokens.map(applicationTokenKey).sorted()
     store.set(slots, forKey: appSlotsKey)
     store.set([String: Int](), forKey: impulseByTokenKey)

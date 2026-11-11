@@ -1,6 +1,7 @@
 import ManagedSettings
 
-/// Counts a tap on the shield button. Opening a locked app does not come here.
+/// Counts a tap on the shield button. Shield appearance is counted in
+/// ShieldConfiguration with the same debounce, so OK after open is not double.
 final class LoqOutShieldAction: ShieldActionDelegate {
   override func handle(
     action: ShieldAction,

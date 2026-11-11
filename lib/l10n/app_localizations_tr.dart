@@ -346,6 +346,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get lockHoldToUnlock => 'Açmak için basılı tut';
 
   @override
+  String get lockNfcEndFocus => 'NFC — Odağı Kapat';
+
+  @override
+  String get lockNfcScanning => 'Telefonunu LoqOut Stone\'a tut…';
+
+  @override
+  String get lockNfcReadFailed => 'LoqOut Stone okunamadı. Yeniden dene.';
+
+  @override
+  String lockNfcSessionError(String error) {
+    return 'NFC oturum hatası: $error';
+  }
+
+  @override
   String get lockStreakKeeps => 'Şimdi bitirmek bugünü seride tutar.';
 
   @override
@@ -512,10 +526,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get sessionUnlockHint =>
-      'Kilitli bir uygulama sizi buraya getirir.\nÇıkış için NFC veya QR kullanın. Acil Durum Kalkan İhlali İrade Kredisi yakar.';
+      'Kilitli bir uygulama sizi buraya getirir.\nOdağı NFC (LoqOut Stone) ile kapatın. QR yalnızca beta test içindir. Acil Durum Kalkan İhlali İrade Kredisi yakar.';
 
   @override
-  String get sessionScanQrUnlock => 'QR ile kilidi aç';
+  String get sessionScanQrUnlock => 'QR (Beta) — Kilidi aç';
 
   @override
   String get sessionEmergencyUnlock => 'Acil Durum Kalkan İhlali';

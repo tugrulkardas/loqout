@@ -169,6 +169,15 @@
   "lockNoStreak": "No streak yet",
   "lockInsightEmpty": "This session starts your record.",
   "lockHoldToUnlock": "Hold to unlock",
+  "lockNfcEndFocus": "NFC — End Focus",
+  "lockNfcScanning": "Hold your phone to the LoqOut Stone…",
+  "lockNfcReadFailed": "Could not read the LoqOut Stone. Try again.",
+  "lockNfcSessionError": "NFC session error: {error}",
+  "@lockNfcSessionError": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
   "lockStreakKeeps": "Ending now keeps today on your streak.",
   "lockStreakMiss": "Ending now does not count today toward your streak.",
   "lockStreakAlready": "Today already counts toward your streak.",
@@ -293,8 +302,8 @@
   "lockHoldSemanticsHint": "Double-tap to unlock without holding.",
   "insightsFrictionEstimate": "Estimate only. About 15 minutes per blocked attempt. This is not measured screen time.",
   "insightsEstimatedAttention": "Estimated",
-  "sessionUnlockHint": "Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.",
-  "sessionScanQrUnlock": "Scan QR (Beta NFC) — Unlock",
+  "sessionUnlockHint": "Opening a locked app brings you back here.\nEnd focus with NFC (LoqOut Stone). QR is beta-only for testers. Emergency override burns Impact Credits.",
+  "sessionScanQrUnlock": "QR (Beta) — Unlock",
   "sessionEmergencyUnlock": "Emergency Unlock (Burn Credits)",
   "sessionStartFailed": "Session start failed: {error}",
   "@sessionStartFailed": {

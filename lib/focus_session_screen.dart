@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:nfc_manager/nfc_manager.dart';
 
 import 'models/app_models.dart';
 import 'models/session_telemetry.dart';
@@ -22,7 +24,6 @@ import 'theme/tapfocus_theme.dart';
 import 'widgets/beta_qr_auth_button.dart';
 import 'widgets/emergency_override_dialog.dart';
 import 'widgets/focus_week_strip.dart';
-import 'widgets/hold_to_unlock_button.dart';
 import 'widgets/post_session_mood_prompt.dart';
 
 /// Active focus session surface — no per-session app picker.
@@ -638,6 +639,76 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     await _unlockSession(viaEmergencyOverride: true);
   }
 
+  Future<void> _onNfcEndFocusPressed() async {
+    if (_unlocking || !isSessionActive) return;
+    final l10n = context.l10n;
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.focusNfcUnavailable)),
+      );
+      return;
+    }
+    bool available = false;
+    try {
+      available = await NfcManager.instance.isAvailable();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.focusNfcCheckFailed('$e'))),
+      );
+      return;
+    }
+    if (!available) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.focusNfcUnavailable)),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.lockNfcScanning)),
+    );
+    try {
+      await NfcManager.instance.startSession(
+        onDiscovered: (NfcTag tag) async {
+          try {
+            await NfcManager.instance.stopSession();
+          } catch (_) {}
+          final uid = _uidFromNfcTag(tag);
+          if (uid == null) {
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.lockNfcReadFailed)),
+            );
+            return;
+          }
+          await _unlockSession();
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.lockNfcSessionError('$e'))),
+      );
+    }
+  }
+
+  String? _uidFromNfcTag(NfcTag tag) {
+    final data = tag.data;
+    for (final key in ['ndef', 'mifareclassic', 'nfca', 'nfcb', 'nfcf', 'nfcv']) {
+      final section = data[key];
+      if (section is! Map) continue;
+      final identifier = section['identifier'];
+      if (identifier is! List || identifier.isEmpty) continue;
+      return identifier
+          .whereType<int>()
+          .map((b) => b.toRadixString(16).padLeft(2, '0'))
+          .join(':');
+    }
+    return null;
+  }
+
   Widget _lockedAppWrap(
     TapFocusColors c,
     AppLocalizations l10n,
@@ -1039,13 +1110,28 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                     const SizedBox(height: 8),
                     _streakNotice(c, l10n, theme, atRisk),
                     const SizedBox(height: 8),
-                    HoldToUnlockButton(
-                      label: l10n.lockHoldToUnlock,
-                      semanticsHint: l10n.lockHoldSemanticsHint,
-                      accessibleLabel: l10n.lockUnlockAction,
-                      enabled: !_unlocking,
-                      onUnlocked: _unlockSession,
+                    FilledButton.icon(
+                      onPressed: _unlocking ? null : _onNfcEndFocusPressed,
+                      icon: const Icon(Icons.nfc),
+                      label: Text(l10n.lockNfcEndFocus),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: c.accent,
+                        foregroundColor: c.onAccent,
+                        disabledBackgroundColor: c.surfaceElevated,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: 4),
                     BetaQrAuthButton(
                       enabled: !_unlocking,
                       label: l10n.sessionScanQrUnlock,

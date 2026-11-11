@@ -656,6 +656,30 @@ abstract class AppLocalizations {
   /// **'Hold to unlock'**
   String get lockHoldToUnlock;
 
+  /// No description provided for @lockNfcEndFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'NFC — End Focus'**
+  String get lockNfcEndFocus;
+
+  /// No description provided for @lockNfcScanning.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold your phone to the LoqOut Stone…'**
+  String get lockNfcScanning;
+
+  /// No description provided for @lockNfcReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the LoqOut Stone. Try again.'**
+  String get lockNfcReadFailed;
+
+  /// No description provided for @lockNfcSessionError.
+  ///
+  /// In en, this message translates to:
+  /// **'NFC session error: {error}'**
+  String lockNfcSessionError(String error);
+
   /// No description provided for @lockStreakKeeps.
   ///
   /// In en, this message translates to:
@@ -839,13 +863,13 @@ abstract class AppLocalizations {
   /// No description provided for @sessionUnlockHint.
   ///
   /// In en, this message translates to:
-  /// **'Opening a locked app brings you back here.\nPrefer NFC / QR unlock. Emergency override burns Impact Credits.'**
+  /// **'Opening a locked app brings you back here.\nEnd focus with NFC (LoqOut Stone). QR is beta-only for testers. Emergency override burns Impact Credits.'**
   String get sessionUnlockHint;
 
   /// No description provided for @sessionScanQrUnlock.
   ///
   /// In en, this message translates to:
-  /// **'Scan QR (Beta NFC) — Unlock'**
+  /// **'QR (Beta) — Unlock'**
   String get sessionScanQrUnlock;
 
   /// No description provided for @sessionEmergencyUnlock.

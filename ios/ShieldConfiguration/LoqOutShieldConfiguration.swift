@@ -28,6 +28,7 @@ final class LoqOutShieldConfiguration: ShieldConfigurationDataSource {
   }
 
   private func shield(named name: String?) -> ShieldConfiguration {
+    LoqOutShieldStore.recordShieldAppearance(displayName: name)
     let subject = (name?.isEmpty == false) ? name! : "This app"
     return ShieldConfiguration(
       backgroundBlurStyle: .systemThickMaterialDark,
